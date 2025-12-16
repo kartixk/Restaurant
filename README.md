@@ -87,7 +87,8 @@ CSS
 
 REST API integration
 
-
+.env cred:-
+MONGO_URI=mongodb+srv://kartikeyaa15_db_user:Kartikeyaa%4015@kartikeya.1psrnv.mongodb.net/sweet-shop?appName=Kartikeya
 
 ---
 
@@ -144,7 +145,7 @@ Demo Credentials (For Testing)
 
 Admin Account
 
-Email: admin@test.com
+Email: admin@tes.com
 
 Password: strongpassword
 
@@ -207,3 +208,4 @@ All AI-generated outputs were reviewed, modified, and manually integrated to ens
 Reflection
 
 AI tools were used as development assistants and not as replacements for manual coding. The final implementation reflects independent problem-solving, practical full-stack development skills, and industry-aligned best practices.
+
