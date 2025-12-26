@@ -87,10 +87,7 @@ CSS
 
 REST API integration
 
-.env cred:-
-MONGO_URI=mongodb+srv://kartikeyaa15_db_user:Kartikeyaa%4015@kartikeya.1psrnv.mongodb.net/sweet-shop?appName=Kartikeya
 
----
 
 Getting Started
 
