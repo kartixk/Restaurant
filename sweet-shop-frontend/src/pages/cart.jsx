@@ -5,6 +5,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { motion, AnimatePresence } from "framer-motion";
 
 // Safe User Role Extractor
 function getUserRole() {
@@ -15,15 +16,15 @@ function getUserRole() {
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const payload = JSON.parse(window.atob(base64));
     return payload.role;
-  // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line no-unused-vars
   } catch (err) {
     return null;
   }
 }
 
 function Cart() {
-  const [cart, setCart] = useState({ items: [], total: 0 }); 
-  const [loading, setLoading] = useState(true); 
+  const [cart, setCart] = useState({ items: [], total: 0 });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const role = getUserRole();
@@ -73,7 +74,7 @@ function Cart() {
       toast.dismiss(loadingToast);
       toast.success(`${sweetName} removed from cart`);
       fetchCart();
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (err) {
       toast.dismiss(loadingToast);
       toast.error("Failed to remove item.");
@@ -84,27 +85,27 @@ function Cart() {
   const updateQuantity = async (sweetId, currentQty, change, maxStock) => {
     const newQty = currentQty + change;
     if (newQty < 1) {
-        toast.warning("Quantity cannot be less than 1");
-        return;
+      toast.warning("Quantity cannot be less than 1");
+      return;
     }
     if (change > 0 && maxStock && newQty > maxStock) {
-        toast.error(`Only ${maxStock} items available in stock!`);
-        return;
+      toast.error(`Only ${maxStock} items available in stock!`);
+      return;
     }
 
     try {
-        await api.put(`/cart/items/${sweetId}`, { quantity: newQty });
-        fetchCart(); 
+      await api.put(`/cart/items/${sweetId}`, { quantity: newQty });
+      fetchCart();
     } catch (err) {
-        console.error(err);
-        toast.error(err.response?.data?.message || "Failed to update quantity");
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to update quantity");
     }
   };
 
   // --- NEW: PDF Generator Helper ---
   const generatePDF = (currentCart) => {
     const doc = new jsPDF();
-    
+
     // Header
     doc.setFontSize(18);
     doc.text("Sweet Shop - Order Invoice", 14, 20);
@@ -160,7 +161,7 @@ function Cart() {
 
     try {
       await api.post("/cart/confirm");
-      
+
       toast.dismiss(loadingToast);
       toast.success("Order confirmed successfully! Downloading Invoice... 🎉");
 
@@ -188,113 +189,154 @@ function Cart() {
   );
 
   return (
-    <div style={styles.container}>
+    <motion.div
+      style={styles.container}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       <ToastContainer position="top-right" autoClose={3000} />
 
       <div style={styles.header}>
-        <h2 style={styles.title}>Shopping Cart</h2>
+        <motion.h2
+          style={styles.title}
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+        >
+          Shopping Cart
+        </motion.h2>
         <button onClick={() => navigate("/")} style={styles.backButton}>
           ← Continue Shopping
         </button>
       </div>
 
-      {(!cart || cart.items.length === 0) ? (
-        <div style={styles.emptyCart}>
-          <div style={styles.emptyIcon}>🛒</div>
-          <h3 style={styles.emptyTitle}>Your cart is empty</h3>
-          <p style={styles.emptyText}>Add some delicious sweets to get started!</p>
-          <button onClick={() => navigate("/")} style={styles.shopButton}>
-            Browse Sweets
-          </button>
-        </div>
-      ) : (
-        <div style={styles.contentWrapper}>
-          {/* LEFT SIDE: ITEMS */}
-          <div style={styles.itemsSection}>
-            {cart.items.map((item) => (
-              <div key={item.sweet || item._id} style={styles.cartItem}>
-                <div style={styles.itemInfo}>
-                  <h3 style={styles.itemName}>{item.sweetName}</h3>
-                  <div style={styles.itemDetails}>
-                    <div style={styles.detailRow}>
-                      <span style={styles.detailLabel}>Price:</span>
-                      <span style={styles.detailValue}>₹{item.price}</span>
-                    </div>
+      <AnimatePresence>
+        {(!cart || cart.items.length === 0) ? (
+          <motion.div
+            style={styles.emptyCart}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            key="empty-cart"
+          >
+            <div style={styles.emptyIcon}>🛒</div>
+            <h3 style={styles.emptyTitle}>Your cart is empty</h3>
+            <p style={styles.emptyText}>Add some delicious sweets to get started!</p>
+            <motion.button
+              onClick={() => navigate("/")}
+              style={styles.shopButton}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Browse Sweets
+            </motion.button>
+          </motion.div>
+        ) : (
+          <div style={styles.contentWrapper} key="not-empty">
+            {/* LEFT SIDE: ITEMS */}
+            <div style={styles.itemsSection}>
+              <AnimatePresence>
+                {cart.items.map((item) => (
+                  <motion.div
+                    key={item.sweet || item._id}
+                    style={styles.cartItem}
+                  >
+                    <div style={styles.itemInfo}>
+                      <h3 style={styles.itemName}>{item.sweetName}</h3>
+                      <div style={styles.itemDetails}>
+                        <div style={styles.detailRow}>
+                          <span style={styles.detailLabel}>Price:</span>
+                          <span style={styles.detailValue}>₹{item.price}</span>
+                        </div>
 
-                    {/* --- QUANTITY BUTTONS (Added Here) --- */}
-                    <div style={styles.detailRow}>
-                      <span style={styles.detailLabel}>Quantity:</span>
-                      <div style={styles.qtyContainer}>
-                        <button 
-                            style={styles.qtyBtn} 
-                            onClick={() => updateQuantity(item.sweet, item.selectedQuantity, -1, item.availableQuantity)}
-                        >-</button>
-                        <span style={styles.qtyValue}>{item.selectedQuantity}</span>
-                        <button 
-                            style={styles.qtyBtn} 
-                            onClick={() => updateQuantity(item.sweet, item.selectedQuantity, 1, item.availableQuantity)}
-                        >+</button>
+                        {/* --- QUANTITY BUTTONS (Added Here) --- */}
+                        <div style={styles.detailRow}>
+                          <span style={styles.detailLabel}>Quantity:</span>
+                          <div style={styles.qtyContainer}>
+                            <button
+                              style={styles.qtyBtn}
+                              onClick={() => updateQuantity(item.sweet, item.selectedQuantity, -1, item.availableQuantity)}
+                            >-</button>
+                            <span style={styles.qtyValue}>{item.selectedQuantity}</span>
+                            <button
+                              style={styles.qtyBtn}
+                              onClick={() => updateQuantity(item.sweet, item.selectedQuantity, 1, item.availableQuantity)}
+                            >+</button>
+                          </div>
+                        </div>
+                        {/* ------------------------------------- */}
+
+                        <div style={styles.detailRow}>
+                          <span style={styles.detailLabel}>Available:</span>
+                          <span style={{
+                            ...styles.detailValue,
+                            color: (item.availableQuantity || 0) > 0 ? '#28a745' : '#dc3545'
+                          }}>
+                            {item.availableQuantity || 0}
+                          </span>
+                        </div>
+                      </div>
+
+                      {(item.availableQuantity || 0) < item.selectedQuantity && (
+                        <div style={styles.stockWarning}>
+                          Only {item.availableQuantity || 0} units available
+                        </div>
+                      )}
+
+                      <div style={styles.itemTotal}>
+                        Subtotal: <span style={styles.itemTotalAmount}>₹{item.price * item.selectedQuantity}</span>
                       </div>
                     </div>
-                    {/* ------------------------------------- */}
 
-                    <div style={styles.detailRow}>
-                      <span style={styles.detailLabel}>Available:</span>
-                      <span style={{
-                        ...styles.detailValue,
-                        color: (item.availableQuantity || 0) > 0 ? '#28a745' : '#dc3545'
-                      }}>
-                        {item.availableQuantity || 0}
-                      </span>
-                    </div>
-                  </div>
+                    <motion.button
+                      onClick={() => removeItem(item.sweet, item.sweetName)}
+                      style={styles.removeButton}
+                      whileHover={{ scale: 1.05, backgroundColor: "#d32f2f" }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Remove
+                    </motion.button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
 
-                  {(item.availableQuantity || 0) < item.selectedQuantity && (
-                    <div style={styles.stockWarning}>
-                      Only {item.availableQuantity || 0} units available
-                    </div>
-                  )}
+            {/* RIGHT SIDE: SUMMARY (Sticky) */}
+            <motion.div
+              style={styles.summaryWrapper}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div style={styles.summaryCard}>
+                <h3 style={styles.summaryTitle}>Order Summary</h3>
 
-                  <div style={styles.itemTotal}>
-                    Subtotal: <span style={styles.itemTotalAmount}>₹{item.price * item.selectedQuantity}</span>
-                  </div>
+                <div style={styles.summaryRow}>
+                  <span style={styles.summaryLabel}>Items ({cart.items.length}):</span>
+                  <span style={styles.summaryValue}>₹{cart.total}</span>
                 </div>
 
-                <button
-                  onClick={() => removeItem(item.sweet, item.sweetName)}
-                  style={styles.removeButton}
+                <div style={styles.summaryDivider}></div>
+
+                <div style={styles.summaryTotal}>
+                  <span style={styles.totalLabel}>Total:</span>
+                  <span style={styles.totalValue}>₹{cart.total}</span>
+                </div>
+
+                <motion.button
+                  onClick={confirmOrder}
+                  style={styles.confirmButton}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  Remove
-                </button>
+                  Confirm Order & Download Bill
+                </motion.button>
               </div>
-            ))}
+            </motion.div>
           </div>
-
-          {/* RIGHT SIDE: SUMMARY (Sticky) */}
-          <div style={styles.summaryWrapper}>
-            <div style={styles.summaryCard}>
-              <h3 style={styles.summaryTitle}>Order Summary</h3>
-
-              <div style={styles.summaryRow}>
-                <span style={styles.summaryLabel}>Items ({cart.items.length}):</span>
-                <span style={styles.summaryValue}>₹{cart.total}</span>
-              </div>
-
-              <div style={styles.summaryDivider}></div>
-
-              <div style={styles.summaryTotal}>
-                <span style={styles.totalLabel}>Total:</span>
-                <span style={styles.totalValue}>₹{cart.total}</span>
-              </div>
-
-              <button onClick={confirmOrder} style={styles.confirmButton}>
-                Confirm Order & Download Bill
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -380,14 +422,14 @@ const styles = {
     alignItems: 'start'
   },
   itemsSection: {
-    flex: '2', 
-    minWidth: '300px', 
+    flex: '2',
+    minWidth: '300px',
     display: 'flex',
     flexDirection: 'column',
     gap: '1rem'
   },
   summaryWrapper: {
-    flex: '1', 
+    flex: '1',
     minWidth: '300px',
     position: 'sticky',
     top: '20px'
@@ -401,22 +443,22 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: '1rem',
-    flexWrap: 'wrap' 
+    flexWrap: 'wrap'
   },
   itemInfo: { flex: 1 },
   itemName: { fontSize: '1.25rem', fontWeight: '700', margin: '0 0 0.5rem 0' },
   itemDetails: { marginBottom: '1rem' },
-  detailRow: { display: 'flex', gap: '10px', alignItems:'center', fontSize: '0.95rem', color: '#555', marginBottom: '4px' },
+  detailRow: { display: 'flex', gap: '10px', alignItems: 'center', fontSize: '0.95rem', color: '#555', marginBottom: '4px' },
   detailLabel: { minWidth: '70px' }, // Keep alignment
   detailValue: { fontWeight: '600', color: '#333' },
-  
+
   // --- Small additions for the buttons only ---
   qtyContainer: { display: 'flex', alignItems: 'center', gap: '8px' },
-  qtyBtn: { 
-    width: '28px', height: '28px', 
-    display: 'flex', alignItems: 'center', justifyContent: 'center', 
-    background: '#edf2f7', border: '1px solid #cbd5e0', 
-    borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' 
+  qtyBtn: {
+    width: '28px', height: '28px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: '#edf2f7', border: '1px solid #cbd5e0',
+    borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'
   },
   qtyValue: { fontWeight: 'bold', minWidth: '20px', textAlign: 'center' },
   // ---------------------------------------------

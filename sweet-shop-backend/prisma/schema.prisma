@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  cart      Cart?
+  sales     Sales[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Sweet {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  price     Float
+  category  String
+  quantity  Int
+  imageUrl  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // Relations are optional in NoSQL but can be useful for Prisma
+  // However, existing data has ObjectIds stored.
+}
+
+model Cart {
+  id     String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId String     @unique @db.ObjectId
+  user   User       @relation(fields: [userId], references: [id])
+  items  CartItem[]
+  total  Float      @default(0)
+}
+
+type CartItem {
+  sweet             String @db.ObjectId
+  sweetName         String
+  price             Float
+  availableQuantity Int
+  selectedQuantity  Int
+}
+
+model Sales {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String     @db.ObjectId
+  user       User       @relation(fields: [userId], references: [id])
+  items      SaleItem[]
+  orderTotal Float
+  status     String     @default("PLACED")
+  createdAt  DateTime   @default(now())
+}
+
+type SaleItem {
+  sweet      String @db.ObjectId
+  sweetName  String
+  price      Float
+  quantity   Int
+  totalPrice Float
+}

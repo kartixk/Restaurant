@@ -19,7 +19,13 @@ async function seed() {
     role: "ADMIN"
   });
 
-  await Sweet.create({ name: "Ladoo", category: "Indian", price: 10, quantity: 20 });
+  await Sweet.create({
+    name: "Ladoo",
+    category: "Indian",
+    price: 10,
+    quantity: 20,
+    imageUrl: "https://placehold.co/400"
+  });
 
   console.log("Seed complete");
   process.exit(0);

@@ -2,6 +2,7 @@ const express = require("express");
 const Sweet = require("../models/Sweet");
 const Sales = require("../models/Sales");
 const { authMiddleware } = require("../middleware/auth");
+const prisma = require("../prismaClient");
 
 const router = express.Router();
 
@@ -22,8 +23,17 @@ const toTitleCase = (str = "") =>
 ------------------------------------------------------- */
 router.get("/", async (req, res) => {
   try {
-    const sweets = await Sweet.find().sort({ createdAt: -1 });
-    res.status(200).json(sweets);
+    const sweets = await prisma.sweet.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Map 'id' to '_id' for frontend compatibility
+    const mappedSweets = sweets.map(sweet => ({
+      ...sweet,
+      _id: sweet.id
+    }));
+
+    res.status(200).json(mappedSweets);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../api/axios";
 import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -25,7 +26,7 @@ export default function Login() {
       localStorage.setItem("role", res.data.user.role);
 
       navigate("/");
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError("Invalid email or password");
     } finally {
@@ -34,8 +35,18 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.formCard}>
+    <motion.div
+      style={styles.container}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.div
+        style={styles.formCard}
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      >
         <div style={styles.header}>
           <h2 style={styles.title}>Welcome Back</h2>
           <p style={styles.subtitle}>Login to your Sweet Shop account</p>
@@ -67,14 +78,24 @@ export default function Login() {
           </div>
 
           {error && (
-            <div style={styles.errorMessage}>
+            <motion.div
+              style={styles.errorMessage}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+            >
               {error}
-            </div>
+            </motion.div>
           )}
 
-          <button type="submit" style={styles.submitButton} disabled={loading}>
+          <motion.button
+            type="submit"
+            style={styles.submitButton}
+            disabled={loading}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
             {loading ? "Logging in..." : "Login"}
-          </button>
+          </motion.button>
         </form>
 
         <div style={styles.footer}>
@@ -85,8 +106,8 @@ export default function Login() {
             </Link>
           </p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

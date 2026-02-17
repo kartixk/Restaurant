@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axios";
 import { toast } from 'react-toastify';
+import { motion } from "framer-motion";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -26,7 +27,7 @@ export default function Register() {
         position: "top-right",
         autoClose: 2000,
       });
-      
+
       navigate("/login");
     } catch (err) {
       toast.error(err.response?.data?.message || "Registration failed", {
@@ -39,8 +40,18 @@ export default function Register() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.formCard}>
+    <motion.div
+      style={styles.container}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.div
+        style={styles.formCard}
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      >
         <div style={styles.header}>
           <h2 style={styles.title}>Create Account</h2>
           <p style={styles.subtitle}>Join Sweet Shop today</p>
@@ -49,9 +60,9 @@ export default function Register() {
         <form onSubmit={handleRegister} style={styles.form}>
           <div style={styles.inputGroup}>
             <label style={styles.label}>Full Name</label>
-            <input 
+            <input
               type="text"
-              placeholder="Enter your full name" 
+              placeholder="Enter your full name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -61,9 +72,9 @@ export default function Register() {
 
           <div style={styles.inputGroup}>
             <label style={styles.label}>Email Address</label>
-            <input 
+            <input
               type="email"
-              placeholder="Enter your email" 
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -83,9 +94,15 @@ export default function Register() {
             />
           </div>
 
-          <button type="submit" style={styles.submitButton} disabled={loading}>
+          <motion.button
+            type="submit"
+            style={styles.submitButton}
+            disabled={loading}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
             {loading ? "Creating Account..." : "Sign Up"}
-          </button>
+          </motion.button>
         </form>
 
         <div style={styles.footer}>
@@ -96,8 +113,8 @@ export default function Register() {
             </Link>
           </p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

@@ -1,31 +1,47 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
+import { Save, Trash2 } from 'lucide-react';
+
+// --- CUSTOM ANIMATED COUNTER ---
+function AnimatedNumber({ value }) {
+  const spring = useSpring(0, { mass: 0.8, stiffness: 75, damping: 15 });
+  const display = useTransform(spring, (current) => Math.floor(current).toLocaleString());
+
+  useEffect(() => {
+    spring.set(value);
+  }, [spring, value]);
+
+  return <motion.span>{display}</motion.span>;
+}
 
 export default function Admin() {
   const [sweets, setSweets] = useState([]);
-  const [newSweet, setNewSweet] = useState({ 
-    name: "", 
-    price: "", 
-    category: "Milk", 
-    quantity: "", 
-    imageUrl: "" 
+  const [newSweet, setNewSweet] = useState({
+    name: "",
+    price: "",
+    category: "Milk",
+    quantity: "",
+    imageUrl: ""
   });
-  const [stockInputs, setStockInputs] = useState({}); 
-  const [inventorySearch, setInventorySearch] = useState(""); 
-  
+  const [stockInputs, setStockInputs] = useState({});
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [inventoryCategory, setInventoryCategory] = useState("All");
+
   // --- REPORT STATE ---
-  const [reportType, setReportType] = useState("day"); 
+  const [reportType, setReportType] = useState("day");
   const [reportSummary, setReportSummary] = useState({ totalAmount: 0, count: 0 });
-  const [salesList, setSalesList] = useState([]); 
+  const [salesList, setSalesList] = useState([]);
   const [reportLoading, setReportLoading] = useState(false);
-  
+
   const navigate = useNavigate();
 
   const categories = [
-    "Milk", "Classic Indian", "Laddu", "Halwa", "Barfi", "Traditional Indian", "Dry Fruits"
+    "Milk", "Laddu", "Halwa", "Barfi", "Traditional Indian", "Dry Fruits"
   ];
 
   const handleApiError = (err, defaultMsg) => {
@@ -46,8 +62,8 @@ export default function Admin() {
       return;
     }
     fetchSweets();
-    fetchReport("day"); 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchReport("day");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSweets = async () => {
@@ -65,18 +81,14 @@ export default function Admin() {
 
     try {
       const res = await api.get(`/reports/sales?type=${type}`);
-      
-      console.log(`ADMIN REPORT (${type}):`, res.data); 
-
-      // Handle response whether it is an Object (likely) or Array
       const data = Array.isArray(res.data) ? (res.data[0] || {}) : res.data;
 
       setReportSummary({
-          totalAmount: data.totalAmount || 0,
-          count: data.count || 0
+        totalAmount: data.totalAmount || 0,
+        count: data.count || 0
       });
-      setSalesList(data.sales || []); 
-      
+      setSalesList(data.sales || []);
+
     } catch (err) {
       handleApiError(err, "Failed to load reports");
       setSalesList([]);
@@ -87,47 +99,43 @@ export default function Admin() {
   };
 
   const downloadExcel = () => {
-    if (!salesList || salesList.length === 0) { 
-      toast.warning("No data to download"); 
-      return; 
+    if (!salesList || salesList.length === 0) {
+      toast.warning("No data to download");
+      return;
     }
-    
+
     const isDayView = reportType === 'day';
     const headers = isDayView
       ? ["Time", "Sweet Name", "Quantity", "Total Price"]
       : ["Date", "Time", "Sweet Name", "Quantity", "Total Price"];
 
     const rows = salesList.map(s => {
-        const dateObj = new Date(s.createdAt || s.date); // Handle createdAt
-        const dateStr = dateObj.toLocaleDateString();
-        const timeStr = dateObj.toLocaleTimeString();
-        
-        // Handle Cart Item Structure
-        const firstItem = s.items?.[0] || {};
-        const sweetName = firstItem.sweetName || "Unknown";
-        const quantity = firstItem.quantity || 0;
-        
-        const safeName = `"${sweetName.replace(/"/g, '""')}"`;
-        
-        return isDayView 
-          ? [timeStr, safeName, quantity, s.orderTotal || s.totalPrice]
-          : [dateStr, timeStr, safeName, quantity, s.orderTotal || s.totalPrice];
+      const dateObj = new Date(s.createdAt || s.date);
+      const dateStr = dateObj.toLocaleDateString();
+      const timeStr = dateObj.toLocaleTimeString();
+
+      const firstItem = s.items?.[0] || {};
+      const sweetName = firstItem.sweetName || "Unknown";
+      const quantity = firstItem.quantity || 0;
+      const safeName = `"${sweetName.replace(/"/g, '""')}"`;
+
+      return isDayView
+        ? [timeStr, safeName, quantity, s.orderTotal || s.totalPrice]
+        : [dateStr, timeStr, safeName, quantity, s.orderTotal || s.totalPrice];
     });
 
-    // Calculate totals
     const totalQuantity = salesList.reduce((sum, s) => sum + (s.items?.[0]?.quantity || 0), 0);
     const totalAmount = salesList.reduce((sum, s) => sum + (s.orderTotal || s.totalPrice || 0), 0);
 
-    // Add summary rows
     const summaryRows = [
       [],
-      isDayView 
+      isDayView
         ? ["", "TOTAL", totalQuantity, totalAmount]
         : ["", "", "TOTAL", totalQuantity, totalAmount]
     ];
 
     const csvContent = [
-      headers.join(","), 
+      headers.join(","),
       ...rows.map(r => r.join(",")),
       ...summaryRows.map(r => r.join(","))
     ].join("\n");
@@ -170,21 +178,18 @@ export default function Admin() {
       const newInputs = { ...stockInputs };
       delete newInputs[id];
       setStockInputs(newInputs);
-    } catch (err) { 
-      handleApiError(err, "Stock update failed"); 
+    } catch (err) {
+      handleApiError(err, "Stock update failed");
     }
   };
 
-  // --- ADD SWEET WITH AUTO-FORMATTING ---
   const handleAddSweet = async (e) => {
     e.preventDefault();
-
-    // Format Name: "guLAB jaMUN" -> "Gulab Jamun"
     const formattedName = newSweet.name
       .trim()
       .toLowerCase()
-      .split(/\s+/) 
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1)) 
+      .split(/\s+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
 
     const sweetPayload = { ...newSweet, name: formattedName };
@@ -192,22 +197,23 @@ export default function Admin() {
     try {
       await api.post("/sweets", sweetPayload);
       toast.success(`"${formattedName}" added successfully!`);
-      setNewSweet({ name: "", price: "", category: "Milk", quantity: "", imageUrl: "" });
-      fetchSweets(); 
-    } catch (err) { 
-      handleApiError(err, "Failed to add sweet"); 
+      const defaultCategory = categories.includes(newSweet.category) ? newSweet.category : categories[0];
+      setNewSweet({ name: "", price: "", category: defaultCategory, quantity: "", imageUrl: "" });
+      fetchSweets();
+    } catch (err) {
+      handleApiError(err, "Failed to add sweet");
     }
   };
 
   const handleDeleteSweet = async (id) => {
     if (window.confirm("Delete this sweet permanently?")) {
-      try { 
-        await api.delete(`/sweets/${id}`); 
+      try {
+        await api.delete(`/sweets/${id}`);
         toast.success("Sweet deleted successfully!");
-        fetchSweets(); 
-      } 
-      catch (err) { 
-        handleApiError(err, "Delete failed"); 
+        fetchSweets();
+      }
+      catch (err) {
+        handleApiError(err, "Delete failed");
       }
     }
   };
@@ -215,233 +221,721 @@ export default function Admin() {
   const handleChange = (e) => setNewSweet({ ...newSweet, [e.target.name]: e.target.value });
   const isDayView = reportType === 'day';
 
-  // --- FILTERED INVENTORY LIST (with alphabetical sorting) ---
+  // --- FILTERED INVENTORY LIST ---
   const filteredInventory = sweets
-    .filter(s => s.name.toLowerCase().includes(inventorySearch.toLowerCase()))
+    .filter(s => {
+      const matchesSearch = s.name.toLowerCase().includes(inventorySearch.toLowerCase());
+      const matchesCategory = inventoryCategory === "All" || s.category === inventoryCategory;
+      return matchesSearch && matchesCategory;
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // --- ANIMATION VARIANTS ---
+  const pageVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: "easeOut", staggerChildren: 0.1 }
+    }
+  };
+
+  const cardVariants = {
+    initial: { opacity: 0, y: 30, scale: 0.95 },
+    animate: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
+    }
+  };
+
+  const tableContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05, delayChildren: 0.1 }
+    }
+  };
+
+  const tableRowVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: "spring", stiffness: 50, damping: 15 }
+    },
+    hover: {
+      backgroundColor: "rgba(240, 244, 255, 0.9)",
+      scale: 1.005,
+      y: -2,
+      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+      transition: { duration: 0.2 }
+    }
+  };
+
+  // --- STAGGER CONTAINER FOR INVENTORY ---
+  const inventoryContainerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.06,
+        delayChildren: 0.05
+      }
+    }
+  };
+
+  // --- BOTTOM -> UP SMOOTH SPRING VARIANT ---
+  const inventoryItemVariants = {
+    hidden: {
+      opacity: 0,
+      y: 30,        // Start from bottom
+      scale: 0.98
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 80,
+        damping: 18,
+        mass: 0.6
+      }
+    },
+    exit: {
+      opacity: 0,
+      y: 20,
+      transition: { duration: 0.2 }
+    },
+    hover: {
+      scale: 1.02,
+      y: -2,
+      boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+      zIndex: 10,
+      transition: { duration: 0.2 }
+    }
+  };
+
   return (
-    <div style={styles.container}>
+    <motion.div
+      style={styles.container}
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+    >
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
+      {/* Background Blobs */}
+      <div style={styles.blob1}></div>
+      <div style={styles.blob2}></div>
+
+      {/* HEADER */}
       <div style={styles.header}>
-        <h1 style={styles.title}>Admin Dashboard</h1>
-        <button onClick={() => navigate("/")} style={styles.backButton}>← Back to Shop</button>
+        <motion.div
+          initial={{ x: -50, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.7 }}
+        >
+          <h1 style={styles.title}>Admin Dashboard</h1>
+          <p style={styles.subtitle}>Welcome back, here's what's happening today.</p>
+        </motion.div>
+
+        <motion.button
+          onClick={() => navigate("/")}
+          style={styles.backButton}
+          whileHover={{ scale: 1.05, backgroundColor: "#fff", color: "#667eea" }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <span style={{ fontSize: '1.2rem' }}>←</span> Back to Shop
+        </motion.button>
       </div>
 
       {/* SALES REPORTS */}
-      <div style={styles.reportCard}>
-        <h2 style={styles.sectionTitle}>Sales & Earnings</h2>
+      <motion.div style={styles.glassCard} variants={cardVariants}>
+        <div style={styles.cardHeader}>
+          <h2 style={styles.sectionTitle}>Sales Overview</h2>
+          <div style={styles.dateBadge}>{new Date().toLocaleDateString()}</div>
+        </div>
+
         <div style={styles.statsContainer}>
-          <div style={styles.statBox}>
-            <div style={styles.statLabel}>Total Revenue</div>
-            <div style={styles.statValueGreen}>₹{reportSummary.totalAmount}</div>
-          </div>
-          <div style={styles.statBox}>
-            <div style={styles.statLabel}>Total Orders</div>
-            <div style={styles.statValueBlue}>{reportSummary.count}</div>
-          </div>
-        </div>
-
-        <div style={styles.filterButtons}>
-          {['day', 'week', 'month', 'year', 'all'].map(t => (
-            <button key={t} onClick={() => fetchReport(t)} style={{...styles.filterButton, ...(reportType === t ? styles.filterButtonActive : {})}}>
-              {t === 'day' ? "Today" : t === 'all' ? "All Time" : t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-          <button onClick={downloadExcel} style={styles.downloadButton}>Download Excel</button>
-        </div>
-
-        <div style={styles.tableWrapper}>
-          {reportLoading ? <div style={styles.loadingText}>Loading...</div> : (
-            <table style={styles.table}>
-              <thead style={styles.tableHead}>
-                <tr>
-                  {!isDayView && <th style={styles.tableHeader}>Date</th>}
-                  <th style={styles.tableHeader}>Time</th>
-                  <th style={styles.tableHeader}>Item</th>
-                  <th style={styles.tableHeader}>Qty</th>
-                  <th style={styles.tableHeader}>Item Total</th>
-                </tr>
-              </thead>
-              
-              <tbody>
-                {salesList.length === 0 ? (
-                  <tr><td colSpan={isDayView ? 4 : 5} style={styles.emptyCell}>No sales found.</td></tr>
-                ) : (
-                  // ✅ UPDATED BLOCK: Using flatMap to show every item individually
-                  salesList.flatMap(s =>
-                    s.items.map(item => {
-                      const dateObj = new Date(s.createdAt || s.date);
-                  
-                      return (
-                        <tr key={item._id} style={styles.tableRow}>
-                          {!isDayView && <td style={styles.tableCell}>{dateObj.toLocaleDateString()}</td>}
-                          <td style={{...styles.tableCell, color:'#666'}}>{dateObj.toLocaleTimeString()}</td>
-                          <td style={{...styles.tableCell, fontWeight:'600'}}>{item.sweetName}</td>
-                          <td style={styles.tableCell}>{item.quantity}</td>
-                          <td style={{...styles.tableCell, color:'#28a745', fontWeight:'bold'}}>₹{item.totalPrice}</td>
-                        </tr>
-                      );
-                    })
-                  )
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      <hr style={styles.divider} />
-
-      {/* ADD SWEET FORM */}
-      <div style={styles.addSection}>
-        <h3 style={styles.sectionSubtitle}>Add New Sweet</h3>
-        <form onSubmit={handleAddSweet} style={styles.form}>
-          <input 
-            name="name" 
-            placeholder="Sweet Name" 
-            value={newSweet.name} 
-            onChange={handleChange} 
-            required 
-            style={styles.input} 
-          />
-          
-          <select 
-            name="category" 
-            value={newSweet.category} 
-            onChange={handleChange} 
-            required 
-            style={styles.select}
+          <motion.div
+            style={styles.statBoxRevenue}
+            whileHover={{ y: -5, boxShadow: "0 15px 30px rgba(40, 167, 69, 0.4)" }}
           >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-
-          <input 
-            type="number" 
-            name="price" 
-            placeholder="Price (₹)" 
-            value={newSweet.price} 
-            onChange={handleChange} 
-            required 
-            style={styles.input} 
-          />
-          <input 
-            type="number" 
-            name="quantity" 
-            placeholder="Initial Quantity" 
-            value={newSweet.quantity} 
-            onChange={handleChange} 
-            required 
-            style={styles.input} 
-          />
-          <input 
-            name="imageUrl" 
-            placeholder="Image URL (e.g., https://example.com/image.jpg)" 
-            value={newSweet.imageUrl} 
-            onChange={handleChange} 
-            style={styles.inputFull} 
-            required 
-          />
-          <button type="submit" style={styles.addButton}>Add Sweet</button>
-        </form>
-      </div>
-
-      {/* INVENTORY (+/- Buttons) with SEARCH */}
-      <div style={styles.inventoryHeader}>
-        <h3 style={styles.sectionSubtitle}>Inventory Management</h3>
-        <input
-          type="text"
-          placeholder=" Search inventory..."
-          value={inventorySearch}
-          onChange={(e) => setInventorySearch(e.target.value)}
-          style={styles.searchInput}
-        />
-      </div>
-
-      <div style={styles.inventoryCard}>
-        {filteredInventory.length === 0 ? (
-          <div style={{padding: '20px', textAlign: 'center', color: '#888'}}>No sweets match your search.</div>
-        ) : (
-          filteredInventory.map(s => (
-            <div key={s._id} style={styles.inventoryItem}>
-              <div style={styles.inventoryInfo}>
-                <div style={styles.sweetName}>{s.name}</div>
-                <div style={styles.sweetCategory}>({s.category})</div>
-                <div style={s.quantity === 0 ? styles.outOfStock : styles.inStock}>
-                  {s.quantity === 0 ? "Out of Stock" : `${s.quantity} left`}
-                </div>
-              </div>
-              
-              <div style={styles.inventoryControls}>
-                <button onClick={() => adjustStock(s._id, s.quantity, -1)} style={styles.quantityButton}>-</button>
-                <input 
-                  type="number" 
-                  value={stockInputs[s._id] !== undefined ? stockInputs[s._id] : s.quantity} 
-                  onChange={(e) => handleStockInputChange(s._id, e.target.value)}
-                  style={styles.quantityInput}
-                />
-                <button onClick={() => adjustStock(s._id, s.quantity, 1)} style={styles.quantityButton}>+</button>
-                <button onClick={() => saveStockUpdate(s._id)} style={styles.updateButton}>Update</button>
-                <button onClick={() => handleDeleteSweet(s._id)} style={styles.deleteButton}>Delete</button>
+            <div style={styles.statIcon}>💰</div>
+            <div>
+              <div style={styles.statLabelWhite}>Total Revenue</div>
+              <div style={styles.statValueWhite}>
+                ₹<AnimatedNumber value={reportSummary.totalAmount} />
               </div>
             </div>
-          ))
-        )}
+          </motion.div>
+
+          <motion.div
+            style={styles.statBoxOrders}
+            whileHover={{ y: -5, boxShadow: "0 15px 30px rgba(0, 123, 255, 0.4)" }}
+          >
+            <div style={styles.statIcon}>📦</div>
+            <div>
+              <div style={styles.statLabelWhite}>Total Orders</div>
+              <div style={styles.statValueWhite}>
+                <AnimatedNumber value={reportSummary.count} />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* FILTERS */}
+        <div style={styles.filterBar}>
+          <div style={styles.filterButtons}>
+            {['day', 'week', 'month', 'year', 'all'].map(t => (
+              <motion.button
+                key={t}
+                onClick={() => fetchReport(t)}
+                style={{
+                  ...styles.filterButton,
+                  ...(reportType === t ? styles.filterButtonActive : {})
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {t === 'day' ? "Today" : t === 'all' ? "All Time" : t.charAt(0).toUpperCase() + t.slice(1)}
+              </motion.button>
+            ))}
+          </div>
+          <motion.button
+            onClick={downloadExcel}
+            style={styles.downloadButton}
+            whileHover={{ scale: 1.05, boxShadow: "0 5px 15px rgba(16, 185, 129, 0.4)" }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Download Excel 📥
+          </motion.button>
+        </div>
+
+        {/* TABLE WRAPPER */}
+        <div style={styles.tableCardContent}>
+          <table style={styles.tableHeaderOnly}>
+            <thead style={styles.tableHead}>
+              <tr>
+                {!isDayView && <th style={{ ...styles.tableHeader, width: '15%' }}>Date</th>}
+                <th style={{ ...styles.tableHeader, width: isDayView ? '20%' : '15%' }}>Time</th>
+                <th style={{ ...styles.tableHeader, width: '30%' }}>Item</th>
+                <th style={{ ...styles.tableHeader, width: '15%' }}>Qty</th>
+                <th style={{ ...styles.tableHeader, width: '20%' }}>Total</th>
+              </tr>
+            </thead>
+          </table>
+
+          <div style={styles.tableScrollArea}>
+            {reportLoading ? (
+              <div style={styles.loadingContainer}>
+                <div style={styles.spinner}></div>
+                <p>Loading data...</p>
+              </div>
+            ) : (
+              <table style={styles.table}>
+                <motion.tbody
+                  variants={tableContainerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <AnimatePresence>
+                    {salesList.length === 0 ? (
+                      <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <td colSpan={isDayView ? 4 : 5} style={styles.emptyCell}>No sales found.</td>
+                      </motion.tr>
+                    ) : (
+                      salesList.flatMap((s, sIndex) =>
+                        s.items.map((item, iIndex) => {
+                          const dateObj = new Date(s.createdAt || s.date);
+                          const uniqueKey = `${s._id}-${item._id}-${iIndex}`;
+                          return (
+                            <motion.tr
+                              key={uniqueKey}
+                              style={styles.tableRow}
+                              variants={tableRowVariants}
+                              whileHover="hover"
+                            >
+                              {!isDayView && <td style={{ ...styles.tableCell, width: '15%' }}>{dateObj.toLocaleDateString()}</td>}
+                              <td style={{ ...styles.tableCellDim, width: isDayView ? '20%' : '15%' }}>{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                              <td style={{ ...styles.tableCellBold, width: '30%' }}>{item.sweetName}</td>
+                              <td style={{ ...styles.tableCell, width: '15%' }}>
+                                <span style={styles.qtyBadge}>{item.quantity}</span>
+                              </td>
+                              <td style={{ ...styles.tableCellGreen, width: '20%' }}>₹{item.totalPrice}</td>
+                            </motion.tr>
+                          );
+                        })
+                      )
+                    )}
+                  </AnimatePresence>
+                </motion.tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* SPLIT SECTION */}
+      <div style={styles.gridSection}>
+
+        {/* ADD FORM */}
+        <motion.div style={styles.glassCardSmall} variants={cardVariants}>
+          <div style={styles.cardHeader}>
+            <h3 style={styles.sectionSubtitle}>✨ Add New Sweet</h3>
+          </div>
+          <form onSubmit={handleAddSweet} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Name</label>
+              <input name="name" placeholder="e.g. Gulab Jamun" value={newSweet.name} onChange={handleChange} required style={styles.input} />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Category</label>
+              <select name="category" value={newSweet.category} onChange={handleChange} required style={styles.select}>
+                {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Price (₹)</label>
+              <input type="number" name="price" placeholder="0" value={newSweet.price} onChange={handleChange} required style={styles.input} />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Quantity</label>
+              <input type="number" name="quantity" placeholder="0" value={newSweet.quantity} onChange={handleChange} required style={styles.input} />
+            </div>
+            <div style={{ ...styles.inputGroup, gridColumn: 'span 2' }}>
+              <label style={styles.label}>Image URL</label>
+              <input name="imageUrl" placeholder="https://..." value={newSweet.imageUrl} onChange={handleChange} style={styles.input} required />
+            </div>
+            <motion.button
+              type="submit"
+              style={styles.addButton}
+              whileHover={{ scale: 1.02, boxShadow: "0 5px 15px rgba(0, 123, 255, 0.4)" }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Add Sweet to Menu
+            </motion.button>
+          </form>
+        </motion.div>
+
+        {/* INVENTORY LIST */}
+        <motion.div style={styles.glassCardSmall} variants={cardVariants}>
+          <div style={styles.inventoryHeader}>
+            <h3 style={styles.sectionSubtitle}>📦 Inventory</h3>
+            <div style={styles.searchWrapper}>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={inventorySearch}
+                onChange={(e) => setInventorySearch(e.target.value)}
+                style={styles.searchInput}
+              />
+              <span style={styles.searchIcon}>🔍</span>
+            </div>
+          </div>
+
+          {/* CATEGORY FILTER TABS */}
+          <div style={styles.categoryTabsContainer}>
+            {["All", ...categories].map((cat) => (
+              <motion.button
+                key={cat}
+                onClick={() => setInventoryCategory(cat)}
+                style={{
+                  ...styles.categoryTab,
+                  ...(inventoryCategory === cat ? styles.categoryTabActive : {})
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {cat}
+              </motion.button>
+            ))}
+          </div>
+
+          <div style={styles.inventoryListScroll}>
+            {/* The Wrapper for Stagger Effect */}
+            <motion.div
+              key={inventoryCategory} // Resets stagger when category changes
+              variants={inventoryContainerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <AnimatePresence mode="popLayout">
+                {filteredInventory.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    style={styles.emptyInventory}
+                  >
+                    <p>No sweets found.</p>
+                  </motion.div>
+                ) : (
+                  filteredInventory.map(s => (
+                    <motion.div
+                      key={s._id}
+                      layout
+                      variants={inventoryItemVariants}
+                      // Children of staggered container don't need explicit initial/animate/exit
+                      // unless overriding, but AnimatePresence needs exit
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      whileHover="hover"
+                      style={styles.inventoryItem}
+                    >
+                      <div style={styles.inventoryInfo}>
+                        <div style={styles.sweetName}>{s.name}</div>
+                        <span style={styles.catBadge}>{s.category}</span>
+                        <div style={s.quantity === 0 ? styles.outOfStock : styles.inStock}>
+                          {s.quantity === 0 ? "• Out of Stock" : `• ${s.quantity} units left`}
+                        </div>
+                      </div>
+
+                      <div style={styles.inventoryControls}>
+                        <div style={styles.stepper}>
+                          <button onClick={() => adjustStock(s._id, s.quantity, -1)} style={styles.stepBtn}>-</button>
+                          <input
+                            type="number"
+                            value={stockInputs[s._id] !== undefined ? stockInputs[s._id] : s.quantity}
+                            onChange={(e) => handleStockInputChange(s._id, e.target.value)}
+                            style={styles.stepInput}
+                          />
+                          <button onClick={() => adjustStock(s._id, s.quantity, 1)} style={styles.stepBtn}>+</button>
+                        </div>
+
+                        <motion.button
+                          onClick={() => saveStockUpdate(s._id)}
+                          style={styles.actionBtnBlue}
+                          whileHover={{ scale: 1.1 }}
+                          title="Save"
+                        >
+                          <Save size={18} />
+                        </motion.button>
+                        <motion.button
+                          onClick={() => handleDeleteSweet(s._id)}
+                          style={styles.actionBtnRed}
+                          whileHover={{ scale: 1.1 }}
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        </motion.div>
+
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 const styles = {
-  container: { padding: '2rem', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Segoe UI', sans-serif", background: '#f5f7fa', minHeight: '100vh' },
-  header: { display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' },
-  title: { fontSize: '2.5rem', fontWeight: '700', color: '#333', margin: 0 },
-  backButton: { padding: '0.75rem 1.5rem', background: 'white', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer' },
-  reportCard: { background: 'white', borderRadius: '12px', padding: '2rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', marginBottom: '2rem' },
-  sectionTitle: { fontSize: '1.5rem', fontWeight: '700', marginBottom: '1.5rem' },
-  sectionSubtitle: { fontSize: '1.3rem', fontWeight: '600', marginBottom: '0', color: '#444' },
-  statsContainer: { display: 'flex', gap: '2rem', marginBottom: '2rem' },
-  statBox: { flex: 1, background: '#f8f9fa', padding: '1.5rem', borderRadius: '10px' },
-  statLabel: { color: '#666', marginBottom: '0.5rem' },
-  statValueGreen: { fontSize: '2rem', fontWeight: 'bold', color: '#28a745' },
-  statValueBlue: { fontSize: '2rem', fontWeight: 'bold', color: '#007bff' },
-  filterButtons: { display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap:'wrap' },
-  filterButton: { padding: '8px 16px', border: 'none', borderRadius: '5px', cursor: 'pointer', background: '#e2e6ea' },
-  filterButtonActive: { background: '#007bff', color: 'white' },
-  downloadButton: { marginLeft: 'auto', padding: '8px 16px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' },
-  tableWrapper: { maxHeight: '300px', overflowY: 'auto', border: '1px solid #eee' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  tableHead: { background: '#f8f9fa', position: 'sticky', top: 0 },
-  tableHeader: { padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd' },
-  tableRow: { borderBottom: '1px solid #eee' },
-  tableCell: { padding: '12px' },
-  emptyCell: { padding: '20px', textAlign: 'center', color: '#888' },
-  loadingText: { padding: '20px', textAlign: 'center', color: '#888' },
-  divider: { margin: '40px 0', border: 'none', borderTop: '1px solid #ddd' },
-  addSection: { background: 'white', padding: '2rem', borderRadius: '10px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', marginBottom: '40px' },
-  form: { display: 'grid', gap: '15px', gridTemplateColumns: '1fr 1fr' },
-  input: { padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1rem' },
-  select: { padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1rem', background: 'white' },
-  inputFull: { gridColumn: 'span 2', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1rem' },
-  addButton: { gridColumn: 'span 2', padding: '12px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
-  
-  // Inventory Header Styles
-  inventoryHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
-  searchInput: { padding: '8px 12px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1rem', width: '250px' },
-  
-  inventoryCard: { background: 'white', borderRadius: '10px', boxShadow: '0 2px 5px rgba(0,0,0,0.1' },
-  inventoryItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', borderBottom: '1px solid #eee' },
+  // --- LAYOUT & BACKGROUND ---
+  container: {
+    padding: '2rem',
+    maxWidth: '1400px',
+    margin: '0 auto',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
+    fontFamily: "'Inter', sans-serif",
+    position: 'relative',
+    overflow: 'hidden'
+  },
+  blob1: {
+    position: 'absolute',
+    top: '-10%',
+    left: '-10%',
+    width: '500px',
+    height: '500px',
+    background: 'rgba(142, 197, 252, 0.4)',
+    borderRadius: '50%',
+    filter: 'blur(80px)',
+    zIndex: 0
+  },
+  blob2: {
+    position: 'absolute',
+    bottom: '-10%',
+    right: '-10%',
+    width: '600px',
+    height: '600px',
+    background: 'rgba(224, 195, 252, 0.4)',
+    borderRadius: '50%',
+    filter: 'blur(100px)',
+    zIndex: 0
+  },
+
+  // --- HEADER ---
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '2.5rem',
+    position: 'relative',
+    zIndex: 1
+  },
+  title: {
+    fontSize: '2.5rem',
+    fontWeight: '800',
+    color: '#2d3748',
+    margin: 0,
+    letterSpacing: '-0.5px',
+    textShadow: '0 2px 4px rgba(0,0,0,0.05)'
+  },
+  subtitle: {
+    color: '#4a5568',
+    fontSize: '1rem',
+    marginTop: '5px'
+  },
+  backButton: {
+    padding: '12px 24px',
+    background: 'rgba(255,255,255,0.7)',
+    border: '1px solid rgba(255,255,255,0.8)',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    color: '#4a5568',
+    fontWeight: '600',
+    backdropFilter: 'blur(10px)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+  },
+
+  // --- GLASS CARDS ---
+  glassCard: {
+    background: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: '24px',
+    padding: '2rem',
+    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+    backdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255, 255, 255, 0.5)',
+    marginBottom: '2rem',
+    position: 'relative',
+    zIndex: 1
+  },
+  glassCardSmall: {
+    background: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: '24px',
+    padding: '1.5rem',
+    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
+    backdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255, 255, 255, 0.5)',
+    display: 'flex',
+    flexDirection: 'column',
+    maxHeight: '650px',
+    position: 'relative',
+    zIndex: 1
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1.5rem'
+  },
+  sectionTitle: { fontSize: '1.4rem', fontWeight: '700', color: '#1a202c', margin: 0 },
+  sectionSubtitle: { fontSize: '1.2rem', fontWeight: '700', color: '#2d3748', margin: 0 },
+  dateBadge: {
+    background: 'rgba(0,0,0,0.05)',
+    padding: '6px 12px',
+    borderRadius: '20px',
+    fontSize: '0.85rem',
+    fontWeight: '600',
+    color: '#4a5568'
+  },
+
+  // --- STATS ---
+  statsContainer: { display: 'flex', gap: '2rem', marginBottom: '2rem', flexWrap: 'wrap' },
+  statBoxRevenue: {
+    flex: 1,
+    minWidth: '280px',
+    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+    padding: '2rem',
+    borderRadius: '20px',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1.5rem',
+    boxShadow: '0 10px 20px rgba(17, 153, 142, 0.3)'
+  },
+  statBoxOrders: {
+    flex: 1,
+    minWidth: '280px',
+    background: 'linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%)',
+    padding: '2rem',
+    borderRadius: '20px',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1.5rem',
+    boxShadow: '0 10px 20px rgba(58, 123, 213, 0.3)'
+  },
+  statIcon: { fontSize: '3rem', background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '12px' },
+  statLabelWhite: { fontSize: '0.9rem', opacity: 0.9, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' },
+  statValueWhite: { fontSize: '2.5rem', fontWeight: '800' },
+
+  // --- FILTERS ---
+  filterBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' },
+  filterButtons: { display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.03)', padding: '5px', borderRadius: '50px' },
+  filterButton: {
+    padding: '8px 20px',
+    border: 'none',
+    borderRadius: '40px',
+    cursor: 'pointer',
+    background: 'transparent',
+    color: '#64748b',
+    fontWeight: '600',
+    fontSize: '0.9rem',
+    transition: 'all 0.3s ease'
+  },
+  filterButtonActive: { background: '#fff', color: '#3a7bd5', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
+  downloadButton: {
+    padding: '10px 24px',
+    background: 'linear-gradient(45deg, #10b981, #059669)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+  },
+
+  // --- TABLE ---
+  tableCardContent: {
+    background: 'white',
+    borderRadius: '16px',
+    border: '1px solid rgba(0,0,0,0.05)',
+    overflow: 'hidden',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+  },
+  tableHeaderOnly: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+  tableScrollArea: {
+    maxHeight: '400px',
+    overflowY: 'auto',
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#cbd5e1 transparent'
+  },
+  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+  tableHead: { background: '#f8fafc' },
+  tableHeader: {
+    padding: '16px',
+    textAlign: 'left',
+    color: '#64748b',
+    fontSize: '0.8rem',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  tableRow: { borderBottom: '1px solid #f1f5f9', cursor: 'pointer' },
+  tableCell: { padding: '16px', color: '#334155', fontSize: '0.95rem' },
+  tableCellDim: { padding: '16px', color: '#94a3b8', fontSize: '0.9rem' },
+  tableCellBold: { padding: '16px', fontWeight: '600', color: '#1e293b' },
+  tableCellGreen: { padding: '16px', fontWeight: '700', color: '#10b981' },
+  qtyBadge: { background: '#edf2f7', padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: '600', color: '#4a5568' },
+  emptyCell: { padding: '40px', textAlign: 'center', color: '#94a3b8' },
+
+  // --- SPLIT GRID ---
+  gridSection: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' },
+
+  // --- FORM ---
+  form: { display: 'grid', gap: '1.5rem', gridTemplateColumns: '1fr 1fr' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  label: { fontSize: '0.85rem', fontWeight: '600', color: '#4a5568' },
+  input: { padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '1rem', background: '#f8fafc', outline: 'none', transition: 'border 0.2s' },
+  select: { padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '1rem', background: '#f8fafc', outline: 'none' },
+  addButton: {
+    gridColumn: 'span 2',
+    padding: '14px',
+    background: 'linear-gradient(45deg, #4facfe 0%, #00f2fe 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    fontWeight: '700',
+    fontSize: '1rem',
+    marginTop: '10px',
+    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+  },
+
+  // --- INVENTORY ---
+  inventoryHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1rem',
+    borderBottom: '1px solid rgba(0,0,0,0.05)',
+    paddingBottom: '1rem'
+  },
+  searchWrapper: { position: 'relative' },
+  searchInput: {
+    padding: '8px 32px 8px 12px',
+    borderRadius: '20px',
+    border: '1px solid #cbd5e1',
+    width: '160px',
+    fontSize: '0.9rem',
+    background: 'rgba(255,255,255,0.8)'
+  },
+  searchIcon: { position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.8rem', opacity: 0.5 },
+
+  // CATEGORY TABS
+  categoryTabsContainer: {
+    display: 'flex',
+    gap: '0.5rem',
+    overflowX: 'auto',
+    paddingBottom: '1rem',
+    marginBottom: '0.5rem',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none'
+  },
+  categoryTab: {
+    padding: '6px 12px',
+    borderRadius: '20px',
+    border: '1px solid #e2e8f0',
+    background: '#fff',
+    color: '#64748b',
+    fontSize: '0.85rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap'
+  },
+  categoryTabActive: {
+    background: '#3a7bd5',
+    color: '#fff',
+    borderColor: '#3a7bd5',
+    boxShadow: '0 2px 5px rgba(58, 123, 213, 0.3)'
+  },
+
+  inventoryListScroll: { overflowY: 'auto', flex: 1, padding: '4px', scrollbarWidth: 'thin' },
+  inventoryItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '16px',
+    marginBottom: '10px',
+    background: 'rgba(255,255,255,0.7)',
+    borderRadius: '16px',
+    border: '1px solid rgba(255,255,255,0.9)',
+    transition: 'all 0.2s'
+  },
   inventoryInfo: { flex: 1 },
-  sweetName: { fontSize: '1.1rem', fontWeight: 'bold' },
-  sweetCategory: { color: '#666', fontSize: '0.9rem' },
-  outOfStock: { color: 'red', fontWeight: 'bold' },
-  inStock: { color: 'green', fontWeight: 'bold' },
-  inventoryControls: { display: 'flex', alignItems: 'center', gap: '10px' },
-  quantityButton: { width: '30px', height: '30px', cursor: 'pointer', background: '#eee', border: '1px solid #ccc', borderRadius: '4px', fontWeight: 'bold' },
-  quantityInput: { width: '60px', textAlign: 'center', padding: '5px' },
-  updateButton: { padding: '6px 12px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
-  deleteButton: { padding: '6px 12px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }
+  sweetName: { fontWeight: '700', color: '#2d3748', fontSize: '1.05rem', marginBottom: '4px' },
+  catBadge: { fontSize: '0.75rem', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', color: '#64748b', fontWeight: '600' },
+  inStock: { fontSize: '0.85rem', color: '#10b981', fontWeight: '600', marginTop: '4px' },
+  outOfStock: { fontSize: '0.85rem', color: '#ef4444', fontWeight: '600', marginTop: '4px' },
+
+  inventoryControls: { display: 'flex', alignItems: 'center', gap: '12px' },
+  stepper: { display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '2px' },
+  stepBtn: { width: '28px', height: '28px', border: 'none', background: 'white', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#64748b', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
+  stepInput: { width: '30px', textAlign: 'center', border: 'none', background: 'transparent', fontWeight: '600', fontSize: '0.9rem' },
+
+  actionBtnBlue: { width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: '#ebf8ff', color: '#3182ce', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  actionBtnRed: { width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: '#fff5f5', color: '#e53e3e', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+
+  loadingContainer: { padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', color: '#64748b' },
+  spinner: { width: '30px', height: '30px', border: '3px solid #e2e8f0', borderTop: '3px solid #3182ce', borderRadius: '50%', animation: 'spin 1s linear infinite' },
+  emptyInventory: { textAlign: 'center', padding: '40px', color: '#a0aec0' }
 };
