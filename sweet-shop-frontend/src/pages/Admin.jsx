@@ -58,12 +58,12 @@ function StatCard({ label, value, trend, isPositive, styles }) {
 
 // ─── STATUS BADGE ────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
-  const styles = {
+  const statusStyles = {
     active: { bg: "#ecfdf5", color: "#047857", border: "1px solid #10b98133" },
-    inactive: { bg: "#f8fafc", color: S.pageSubtitle.color, border: "1px solid #cbd5e1" },
+    inactive: { bg: "#f8fafc", color: "#64748b", border: "1px solid #cbd5e1" },
     pending: { bg: "#fffbeb", color: "#b45309", border: "1px solid #f59e0b33" }
   };
-  const s = styles[status?.toLowerCase()] || styles.inactive;
+  const s = statusStyles[status?.toLowerCase()] || statusStyles.inactive;
   return (
     <span style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600, backgroundColor: s.bg, color: s.color, border: s.border, textTransform: "capitalize" }}>
       {status || 'Unknown'}
@@ -77,17 +77,10 @@ export default function Admin() {
   const role = upperRole ? upperRole.toUpperCase() : null;
   const navigate = useNavigate();
 
-<<<<<<< HEAD
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
-=======
-  // ✅ UPDATED: Removed "Classic Indian" from the categories array.
-  const categories = [
-    "Milk", "Laddu", "Halwa", "Barfi", "Traditional Indian", "Dry Fruits"
-  ];
->>>>>>> origin/main
 
   const [activeSidebarItem, setActiveSidebarItem] = useState("Dashboard");
   const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -215,35 +208,11 @@ export default function Admin() {
   };
   const handleAddProduct = (e) => {
     e.preventDefault();
-<<<<<<< HEAD
     const name = newProduct.name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     addProductMutation.mutate({ ...newProduct, name, branchId: selectedBranchId }, {
       onSuccess: () => { toast.success(`"${name}" added!`); setNewProduct({ name: "", price: "", category: "Main Course", quantity: "", imageUrl: "", branchId: "" }); },
       onError: (err) => handleApiError(err, "Failed to add product")
     });
-=======
-
-    // Format Name: "guLAB jaMUN" -> "Gulab Jamun"
-    const formattedName = newSweet.name
-      .trim()
-      .toLowerCase()
-      .split(/\s+/) 
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1)) 
-      .join(' ');
-
-    const sweetPayload = { ...newSweet, name: formattedName };
-
-    try {
-      await api.post("/sweets", sweetPayload);
-      toast.success(`"${formattedName}" added successfully!`);
-      // Use the first remaining category as default if the removed category was the default
-      const defaultCategory = categories.includes(newSweet.category) ? newSweet.category : categories[0];
-      setNewSweet({ name: "", price: "", category: defaultCategory, quantity: "", imageUrl: "" });
-      fetchSweets(); 
-    } catch (err) { 
-      handleApiError(err, "Failed to add sweet"); 
-    }
->>>>>>> origin/main
   };
   const handleDeleteProduct = (id) => {
     if (window.confirm("Delete this item?")) deleteProductMutation.mutate(id, {
@@ -287,7 +256,6 @@ export default function Admin() {
           </div>
         </div>
 
-<<<<<<< HEAD
         <div style={S.card}>
           <div style={S.cardHeader}><h2 style={S.cardTitle}>Top Branches</h2></div>
           <div style={{ padding: "1rem" }}>
@@ -309,138 +277,6 @@ export default function Admin() {
                     <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: '0.875rem' }}>{formatCurrency(b.revenue)}</div>
                   </div>
                 ))}
-=======
-        <div style={styles.filterButtons}>
-          {['day', 'week', 'month', 'year', 'all'].map(t => (
-            <button key={t} onClick={() => fetchReport(t)} style={{...styles.filterButton, ...(reportType === t ? styles.filterButtonActive : {})}}>
-              {t === 'day' ? "Today" : t === 'all' ? "All Time" : t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-          <button onClick={downloadExcel} style={styles.downloadButton}>Download Excel</button>
-        </div>
-
-        <div style={styles.tableWrapper}>
-          {reportLoading ? <div style={styles.loadingText}>Loading...</div> : (
-            <table style={styles.table}>
-              <thead style={styles.tableHead}>
-                <tr>
-                  {!isDayView && <th style={styles.tableHeader}>Date</th>}
-                  <th style={styles.tableHeader}>Time</th>
-                  <th style={styles.tableHeader}>Item</th>
-                  <th style={styles.tableHeader}>Qty</th>
-                  <th style={styles.tableHeader}>Item Total</th>
-                </tr>
-              </thead>
-              
-              <tbody>
-                {salesList.length === 0 ? (
-                  <tr><td colSpan={isDayView ? 4 : 5} style={styles.emptyCell}>No sales found.</td></tr>
-                ) : (
-                  // ✅ UPDATED BLOCK: Using flatMap to show every item individually
-                  salesList.flatMap(s =>
-                    s.items.map(item => {
-                      const dateObj = new Date(s.createdAt || s.date);
-                    
-                      return (
-                        <tr key={item._id} style={styles.tableRow}>
-                          {!isDayView && <td style={styles.tableCell}>{dateObj.toLocaleDateString()}</td>}
-                          <td style={{...styles.tableCell, color:'#666'}}>{dateObj.toLocaleTimeString()}</td>
-                          <td style={{...styles.tableCell, fontWeight:'600'}}>{item.sweetName}</td>
-                          <td style={styles.tableCell}>{item.quantity}</td>
-                          <td style={{...styles.tableCell, color:'#28a745', fontWeight:'bold'}}>₹{item.totalPrice}</td>
-                        </tr>
-                      );
-                    })
-                  )
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      <hr style={styles.divider} />
-
-      {/* ADD SWEET FORM */}
-      <div style={styles.addSection}>
-        <h3 style={styles.sectionSubtitle}>Add New Sweet</h3>
-        <form onSubmit={handleAddSweet} style={styles.form}>
-          <input 
-            name="name" 
-            placeholder="Sweet Name" 
-            value={newSweet.name} 
-            onChange={handleChange} 
-            required 
-            style={styles.input} 
-          />
-          
-          <select 
-            name="category" 
-            value={newSweet.category} 
-            onChange={handleChange} 
-            required 
-            style={styles.select}
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-
-          <input 
-            type="number" 
-            name="price" 
-            placeholder="Price (₹)" 
-            value={newSweet.price} 
-            onChange={handleChange} 
-            required 
-            style={styles.input} 
-          />
-          <input 
-            type="number" 
-            name="quantity" 
-            placeholder="Initial Quantity" 
-            value={newSweet.quantity} 
-            onChange={handleChange} 
-            required 
-            style={styles.input} 
-          />
-          <input 
-            name="imageUrl" 
-            placeholder="Image URL (e.g., https://example.com/image.jpg)" 
-            value={newSweet.imageUrl} 
-            onChange={handleChange} 
-            style={styles.inputFull} 
-            required 
-          />
-          <button type="submit" style={styles.addButton}>Add Sweet</button>
-        </form>
-      </div>
-
-      {/* INVENTORY (+/- Buttons) with SEARCH */}
-      <div style={styles.inventoryHeader}>
-        <h3 style={styles.sectionSubtitle}>Inventory Management</h3>
-        <input
-          type="text"
-          placeholder=" Search inventory..."
-          value={inventorySearch}
-          onChange={(e) => setInventorySearch(e.target.value)}
-          style={styles.searchInput}
-        />
-      </div>
-
-      <div style={styles.inventoryCard}>
-        {filteredInventory.length === 0 ? (
-          <div style={{padding: '20px', textAlign: 'center', color: '#888'}}>No sweets match your search.</div>
-        ) : (
-          filteredInventory.map(s => (
-            <div key={s._id} style={styles.inventoryItem}>
-              <div style={styles.inventoryInfo}>
-                <div style={styles.sweetName}>{s.name}</div>
-                <div style={styles.sweetCategory}>({s.category})</div>
-                <div style={s.quantity === 0 ? styles.outOfStock : styles.inStock}>
-                  {s.quantity === 0 ? "Out of Stock" : `${s.quantity} left`}
-                </div>
->>>>>>> origin/main
               </div>
             )}
           </div>
@@ -520,7 +356,6 @@ export default function Admin() {
       <div style={S.mainContent}>
         <button onClick={() => setSelectedBranchId("")} style={S.linkBtn}>← Back to all branches</button>
 
-        {/* Branch Header Profile */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '1.5rem', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
             <div style={{ width: 64, height: 64, borderRadius: '12px', backgroundColor: isDarkMode ? "#334155" : "#e2e8f0", display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', border: '1px solid #cbd5e1' }}>
@@ -540,7 +375,6 @@ export default function Admin() {
           <button style={S.secondaryBtn}>Edit Settings</button>
         </div>
 
-        {/* Branch Tabs */}
         <div style={S.tabs}>
           {[["overview", "Financial Overview"], ["inventory", "Menu & Inventory"], ["add", "Add Item"]].map(([key, label]) => (
             <button key={key} onClick={() => setActiveBranchTab(key)} style={{ ...S.tabBtn, ...(activeBranchTab === key ? S.tabBtnActive : {}) }}>{label}</button>
@@ -549,10 +383,7 @@ export default function Admin() {
 
         {activeBranchTab === "overview" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            {/* Manager Info & Quick Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-
-              {/* Manager Card */}
               <div style={{ ...S.card, padding: '1.5rem' }}>
                 <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: S.pageSubtitle.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Branch Manager</h3>
                 {branch.managerName ? (
@@ -577,7 +408,6 @@ export default function Admin() {
                 )}
               </div>
 
-              {/* Specific Stats */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <StatCard styles={S} label="Total Revenue (All Time)" value={formatCurrency(reportSummary.totalAmount)} trend="+12.4% vs last month" isPositive={true} />
                 <StatCard styles={S} label="Today's Revenue" value={formatCurrency(reportSummary.totalAmount * 0.05)} trend="-2.1% vs yesterday" isPositive={false} />
@@ -586,7 +416,6 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* Charts Row */}
             <div style={S.chartGrid}>
               <div style={{ ...S.card, gridColumn: "span 2" }}>
                 <div style={S.cardHeader}><h2 style={S.cardTitle}>Daily Order Volume</h2></div>
@@ -618,11 +447,9 @@ export default function Admin() {
                 </div>
               </div>
             </div>
-
           </motion.div>
         )}
 
-        {/* Existing Inventory Functionality retained visually but cleaner */}
         {activeBranchTab === "inventory" && <ProductInventoryList categories={categories} inventoryCategory={inventoryCategory} setInventoryCategory={setInventoryCategory} inventorySearch={inventorySearch} setInventorySearch={setInventorySearch} filteredInventory={filteredInventory} stockInputs={stockInputs} handleStockInputChange={handleStockInputChange} adjustStock={adjustStock} saveStockUpdate={saveStockUpdate} handleDeleteProduct={handleDeleteProduct} />}
         {activeBranchTab === "add" && <AddProductForm handleAddProduct={handleAddProduct} newProduct={{ ...newProduct, branchId: selectedBranchId }} handleChange={handleChange} categories={categories} branches={dbBranches} role={role} />}
       </div>
@@ -631,7 +458,6 @@ export default function Admin() {
 
   // ─── ANALYTICS COMPONENT ───────────────────────────────────────────────────
   const renderAnalytics = () => {
-    // Top Products Aggregation
     const productSalesMap = {};
     salesList.forEach(sale => {
       sale.items.forEach(item => {
@@ -655,7 +481,6 @@ export default function Admin() {
         </div>
 
         <div style={S.chartGrid}>
-          {/* Top Selling Products */}
           <div style={S.card}>
             <div style={S.cardHeader}><h2 style={S.cardTitle}>Top Selling Items</h2></div>
             <div style={{ padding: "1rem" }}>
@@ -682,7 +507,6 @@ export default function Admin() {
             </div>
           </div>
 
-          {/* Revenue by Branch */}
           <div style={S.card}>
             <div style={S.cardHeader}><h2 style={S.cardTitle}>Branch Performance Ranked</h2></div>
             <div style={{ padding: "1rem" }}>
@@ -725,7 +549,6 @@ export default function Admin() {
 
       <div style={{ ...S.card, padding: '2rem', maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-        {/* Profile Section */}
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: S.pageTitle.color, borderBottom: S.cardHeader.borderBottom, paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
             Personal Profile
@@ -751,7 +574,6 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Preferences Section */}
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: S.pageTitle.color, borderBottom: S.cardHeader.borderBottom, paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
             System Preferences
@@ -946,87 +768,87 @@ export default function Admin() {
         </div>
       </div>
     </div>
-  );
+);
 }
 
-// ─── SaaS STYLES ─────────────────────────────────────────────────────────────
-const getStyles = (isDark) => ({
-  layout: { display: "flex", flexDirection: "row", height: "100vh", backgroundColor: isDark ? "#0f172a" : "#f8fafc", fontFamily: "'Inter', sans-serif", color: isDark ? "#f8fafc" : "#0f172a" },
+  // ─── SaaS STYLES ─────────────────────────────────────────────────────────────
+  const getStyles = (isDark) => ({
+    layout: { display: "flex", flexDirection: "row", height: "100vh", backgroundColor: isDark ? "#0f172a" : "#f8fafc", fontFamily: "'Inter', sans-serif", color: isDark ? "#f8fafc" : "#0f172a" },
 
-  // Topbar
-  topbar: { height: "64px", backgroundColor: isDark ? "#1e293b" : "#fff", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 1.5rem", flexShrink: 0 },
-  topbarLeft: { display: "flex", alignItems: "center" },
-  topbarRight: { display: "flex", alignItems: "center" },
-  logoIcon: { width: "32px", height: "32px", borderRadius: "8px", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.2rem", fontStyle: "italic", flexShrink: 0 },
-  logoText: { color: isDark ? "#f8fafc" : "#1e293b", fontWeight: "800", letterSpacing: "0.5px", fontSize: "1.25rem", whiteSpace: "nowrap" },
-  collapseBtn: { background: "none", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer", color: isDark ? "#94a3b8" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", borderRadius: "6px", transition: "background 0.2s" },
-  avatarBtn: { width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 5px rgba(236,72,153,0.3)", transition: "transform 0.2s" },
+    // Topbar
+    topbar: { height: "64px", backgroundColor: isDark ? "#1e293b" : "#fff", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 1.5rem", flexShrink: 0 },
+    topbarLeft: { display: "flex", alignItems: "center" },
+    topbarRight: { display: "flex", alignItems: "center" },
+    logoIcon: { width: "32px", height: "32px", borderRadius: "8px", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.2rem", fontStyle: "italic", flexShrink: 0 },
+    logoText: { color: isDark ? "#f8fafc" : "#1e293b", fontWeight: "800", letterSpacing: "0.5px", fontSize: "1.25rem", whiteSpace: "nowrap" },
+    collapseBtn: { background: "none", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer", color: isDark ? "#94a3b8" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", borderRadius: "6px", transition: "background 0.2s" },
+    avatarBtn: { width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 5px rgba(236,72,153,0.3)", transition: "transform 0.2s" },
 
-  // Dropdown
-  dropdownMenu: { position: "absolute", top: "120%", right: "0", width: "220px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
-  dropdownHeader: { padding: "16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-  userName: { fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
-  userEmail: { color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.75rem", marginTop: "2px" },
-  userRoleBadge: { display: "inline-block", marginTop: "6px", padding: "2px 8px", backgroundColor: isDark ? "#334155" : "#e2e8f0", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.65rem", fontWeight: "700", borderRadius: "4px" },
-  dropdownDivider: { height: "1px", backgroundColor: isDark ? "#334155" : "#e2e8f0" },
-  dropdownItemLogout: { display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "12px 16px", border: "none", backgroundColor: isDark ? "#1e293b" : "#fff", color: "#dc2626", fontSize: "0.875rem", fontWeight: "500", cursor: "pointer", transition: "background-color 0.2s" },
+    // Dropdown
+    dropdownMenu: { position: "absolute", top: "120%", right: "0", width: "220px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
+    dropdownHeader: { padding: "16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
+    userName: { fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
+    userEmail: { color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.75rem", marginTop: "2px" },
+    userRoleBadge: { display: "inline-block", marginTop: "6px", padding: "2px 8px", backgroundColor: isDark ? "#334155" : "#e2e8f0", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.65rem", fontWeight: "700", borderRadius: "4px" },
+    dropdownDivider: { height: "1px", backgroundColor: isDark ? "#334155" : "#e2e8f0" },
+    dropdownItemLogout: { display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "12px 16px", border: "none", backgroundColor: isDark ? "#1e293b" : "#fff", color: "#dc2626", fontSize: "0.875rem", fontWeight: "500", cursor: "pointer", transition: "background-color 0.2s" },
 
-  // Notifications
-  iconBtn: { background: "none", border: "none", color: isDark ? "#94a3b8" : "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s", position: "relative" },
-  notificationDot: { position: "absolute", top: "2px", right: "2px", backgroundColor: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: "bold", width: "16px", height: "16px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" },
-  notificationsDropdown: { position: "absolute", top: "120%", right: "0", width: "380px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
-  notificationsHeader: { padding: "12px 16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
-  notificationItem: { padding: "16px", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", transition: "background-color 0.15s", ":hover": { backgroundColor: isDark ? "#334155" : "#f8fafc" } },
-  approveBtn: { backgroundColor: "#10b981", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: "600", cursor: "pointer", transition: "background 0.2s", alignSelf: "center", boxShadow: "0 1px 2px rgba(16, 185, 129, 0.2)" },
+    // Notifications
+    iconBtn: { background: "none", border: "none", color: isDark ? "#94a3b8" : "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s", position: "relative" },
+    notificationDot: { position: "absolute", top: "2px", right: "2px", backgroundColor: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: "bold", width: "16px", height: "16px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" },
+    notificationsDropdown: { position: "absolute", top: "120%", right: "0", width: "380px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
+    notificationsHeader: { padding: "12px 16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
+    notificationItem: { padding: "16px", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", transition: "background-color 0.15s", ":hover": { backgroundColor: isDark ? "#334155" : "#f8fafc" } },
+    approveBtn: { backgroundColor: "#10b981", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: "600", cursor: "pointer", transition: "background 0.2s", alignSelf: "center", boxShadow: "0 1px 2px rgba(16, 185, 129, 0.2)" },
 
-  // Body Layout
-  bodyWrapper: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" },
+    // Body Layout
+    bodyWrapper: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" },
 
-  // Sidebar
-  sidebar: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRight: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)" },
-  sidebarHeader: { height: "64px", display: "flex", alignItems: "center", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, gap: "10px", flexShrink: 0 },
-  sidebarNav: { padding: "16px 12px", display: "flex", flexDirection: "column", gap: "8px" },
-  sidebarNavItem: { display: "flex", alignItems: "center", gap: "12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", cursor: "pointer", transition: "all 0.15s ease", overflow: "hidden" },
-  sidebarNavItemActive: { backgroundColor: isDark ? "#334155" : "#f1f5f9", color: isDark ? "#f8fafc" : "#0f172a", fontWeight: 600 },
-  sidebarIcon: { display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", flexShrink: 0 },
+    // Sidebar
+    sidebar: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRight: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)" },
+    sidebarHeader: { height: "64px", display: "flex", alignItems: "center", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, gap: "10px", flexShrink: 0 },
+    sidebarNav: { padding: "16px 12px", display: "flex", flexDirection: "column", gap: "8px" },
+    sidebarNavItem: { display: "flex", alignItems: "center", gap: "12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", cursor: "pointer", transition: "all 0.15s ease", overflow: "hidden" },
+    sidebarNavItemActive: { backgroundColor: isDark ? "#334155" : "#f1f5f9", color: isDark ? "#f8fafc" : "#0f172a", fontWeight: 600 },
+    sidebarIcon: { display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", flexShrink: 0 },
 
-  // Main Area
-  mainArea: { flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", color: isDark ? "#f8fafc" : "#0f172a" },
-  mainContent: { maxWidth: "1200px", width: "100%", margin: "0 auto", padding: "2.5rem 2rem" },
-  headerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" },
+    // Main Area
+    mainArea: { flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", color: isDark ? "#f8fafc" : "#0f172a" },
+    mainContent: { maxWidth: "1200px", width: "100%", margin: "0 auto", padding: "2.5rem 2rem" },
+    headerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" },
 
-  // Typography
-  pageTitle: { fontSize: "1.5rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: "0 0 4px 0", letterSpacing: "-0.01em" },
-  pageSubtitle: { fontSize: "0.875rem", color: isDark ? "#94a3b8" : "#64748b", margin: 0 },
+    // Typography
+    pageTitle: { fontSize: "1.5rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: "0 0 4px 0", letterSpacing: "-0.01em" },
+    pageSubtitle: { fontSize: "0.875rem", color: isDark ? "#94a3b8" : "#64748b", margin: 0 },
 
-  // Stats
-  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginBottom: "2rem" },
-  statCard: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" },
-  statHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  statLabel: { fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b" },
-  statValue: { fontSize: "1.875rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", letterSpacing: "-0.02em", lineHeight: "1.2" },
-  trendBadge: { fontSize: "0.75rem", fontWeight: 600, padding: "2px 8px", borderRadius: "100px", alignSelf: "flex-start", display: "inline-flex", alignItems: "center" },
+    // Stats
+    statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginBottom: "2rem" },
+    statCard: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" },
+    statHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+    statLabel: { fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b" },
+    statValue: { fontSize: "1.875rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", letterSpacing: "-0.02em", lineHeight: "1.2" },
+    trendBadge: { fontSize: "0.75rem", fontWeight: 600, padding: "2px 8px", borderRadius: "100px", alignSelf: "flex-start", display: "inline-flex", alignItems: "center" },
 
-  // Cards & Tables
-  chartGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.5rem", marginBottom: "2rem" },
-  card: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", display: "flex", flexDirection: "column" },
-  cardHeader: { padding: "1rem 1.25rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-  cardTitle: { fontSize: "0.9rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { padding: "0.75rem 1.25rem", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: isDark ? "#94a3b8" : "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-  tr: { borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, transition: "background-color 0.15s", cursor: "pointer" },
-  td: { padding: "1rem 1.25rem", verticalAlign: "middle", color: isDark ? "#f8fafc" : "#0f172a" },
+    // Cards & Tables
+    chartGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.5rem", marginBottom: "2rem" },
+    card: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", display: "flex", flexDirection: "column" },
+    cardHeader: { padding: "1rem 1.25rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
+    cardTitle: { fontSize: "0.9rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" },
+    table: { width: "100%", borderCollapse: "collapse" },
+    th: { padding: "0.75rem 1.25rem", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: isDark ? "#94a3b8" : "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
+    tr: { borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, transition: "background-color 0.15s", cursor: "pointer" },
+    td: { padding: "1rem 1.25rem", verticalAlign: "middle", color: isDark ? "#f8fafc" : "#0f172a" },
 
-  // Buttons
-  primaryBtn: { padding: "8px 16px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: "#fff", backgroundColor: isDark ? "#3b82f6" : "#0f172a", border: "none", cursor: "pointer" },
-  actionBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#f8fafc" : "#0f172a", backgroundColor: isDark ? "#334155" : "#fff", border: `1px solid ${isDark ? "#475569" : "#cbd5e1"}`, cursor: "pointer", transition: "all 0.15s" },
-  secondaryBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", backgroundColor: isDark ? "#1e293b" : "#fff", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer" },
-  linkBtn: { padding: 0, border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" },
+    // Buttons
+    primaryBtn: { padding: "8px 16px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: "#fff", backgroundColor: isDark ? "#3b82f6" : "#0f172a", border: "none", cursor: "pointer" },
+    actionBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#f8fafc" : "#0f172a", backgroundColor: isDark ? "#334155" : "#fff", border: `1px solid ${isDark ? "#475569" : "#cbd5e1"}`, cursor: "pointer", transition: "all 0.15s" },
+    secondaryBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", backgroundColor: isDark ? "#1e293b" : "#fff", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer" },
+    linkBtn: { padding: 0, border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" },
 
-  // Tabs
-  tabs: { display: "flex", gap: "1.5rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, marginBottom: "1.5rem" },
-  tabBtn: { padding: "0 0 0.75rem 0", border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", borderBottom: "2px solid transparent", transition: "all 0.15s" },
-  tabBtnActive: { color: isDark ? "#f8fafc" : "#0f172a", borderBottomColor: isDark ? "#f8fafc" : "#0f172a" },
+    // Tabs
+    tabs: { display: "flex", gap: "1.5rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, marginBottom: "1.5rem" },
+    tabBtn: { padding: "0 0 0.75rem 0", border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", borderBottom: "2px solid transparent", transition: "all 0.15s" },
+    tabBtnActive: { color: isDark ? "#f8fafc" : "#0f172a", borderBottomColor: isDark ? "#f8fafc" : "#0f172a" },
 
-  emptyState: { padding: "4rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", color: isDark ? "#64748b" : "#94a3b8", fontSize: "0.875rem", textAlign: "center" }
-});
+    emptyState: { padding: "4rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", color: isDark ? "#64748b" : "#94a3b8", fontSize: "0.875rem", textAlign: "center" }
+  });

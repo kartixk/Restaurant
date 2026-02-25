@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿const { sweetSchema } = require('../src/validators/sweetValidator');
+const { sweetSchema } = require('../src/validators/sweetValidator');
 const { registerSchema } = require('../src/validators/authValidator');
 
 describe('Schema validation (Zod replacing Mongoose)', () => {
@@ -37,8 +36,7 @@ describe('Schema validation (Zod replacing Mongoose)', () => {
     expect(result.success).toBe(true);
   });
 });
-=======
-﻿const User = require('../src/models/User');
+const User = require('../src/models/User');
 const Sweet = require('../src/models/Sweet');
 
 describe('Model validation (no DB)', () => {
@@ -76,4 +74,4 @@ describe('Model validation (no DB)', () => {
     expect(s.validateSync()).toBeUndefined();
   });
 });
->>>>>>> origin/main
+
