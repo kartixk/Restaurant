@@ -1,25 +1,26 @@
 process.env.JWT_SECRET = 'test-secret-key';
 
 const request = require('supertest');
-const mongoose = require('mongoose');
 const app = require('../src/app');
-const User = require('../src/models/User');
-
-const TEST_DB_URI = 'mongodb://localhost:27017/sweetshop_test_auth';
+const prisma = require('../src/prismaClient');
 
 beforeAll(async () => {
-  await mongoose.connect(TEST_DB_URI);
-  await User.deleteMany({});
+  await prisma.sales.deleteMany({});
+  await prisma.cart.deleteMany({});
+  await prisma.sweet.deleteMany({});
+  await prisma.user.deleteMany({});
 });
 
 afterAll(async () => {
-  await User.deleteMany({});
-  await mongoose.connection.close();
+  await prisma.sales.deleteMany({});
+  await prisma.cart.deleteMany({});
+  await prisma.sweet.deleteMany({});
+  await prisma.user.deleteMany({});
+  await prisma.$disconnect();
 });
 
-describe('Auth API', () => {
-  test('register -> login works', async () => {
-
+describe('🔐 Auth API', () => {
+  test('register -> login works on happy path', async () => {
     // Register
     const reg = await request(app)
       .post('/api/auth/register')
@@ -30,7 +31,7 @@ describe('Auth API', () => {
       });
 
     expect(reg.status).toBe(201);
-    expect(reg.body.token).toBeTruthy();
+    expect(reg.headers['set-cookie'][0]).toMatch(/token=/);
 
     // Login
     const login = await request(app)
@@ -41,6 +42,61 @@ describe('Auth API', () => {
       });
 
     expect(login.status).toBe(200);
-    expect(login.body.token).toBeTruthy();
+    expect(login.headers['set-cookie'][0]).toMatch(/token=/);
+    expect(login.body.user.email).toBe('test@test.com');
+  });
+
+  test('registering with an already existing email returns 400', async () => {
+    const reg = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'test@test.com',
+        password: 'newpassword123',
+        name: 'Duplicate User'
+      });
+
+    expect(reg.status).toBe(400);
+    expect(reg.body.error).toMatch(/Email already/i);
+  });
+
+  test('login with incorrect password returns 400 or 401', async () => {
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'test@test.com',
+        password: 'wrongpassword'
+      });
+
+    expect(login.status).toBe(400);
+    expect(login.body.error).toMatch(/Invalid credentials/i);
+  });
+
+  test('login with non-existent email returns 400 or 401', async () => {
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'nobody@test.com',
+        password: 'pass123'
+      });
+
+    expect(login.status).toBe(400);
+    expect(login.body.error).toMatch(/Invalid credentials/i);
+  });
+
+  test('accessing protected route without token returns 401', async () => {
+    const res = await request(app)
+      .get('/api/cart');
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/Authorization required/i);
+  });
+
+  test('accessing protected route with invalid token returns 403 or 401', async () => {
+    const res = await request(app)
+      .get('/api/cart')
+      .set('Authorization', 'Bearer invalid.token.here');
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/Invalid or expired token/i);
   });
 });

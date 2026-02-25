@@ -1,54 +1,69 @@
 process.env.JWT_SECRET = 'test-secret-key';
 
 const request = require('supertest');
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const app = require('../src/app');
-const User = require('../src/models/User');
-const Sweet = require('../src/models/Sweet');
+const prisma = require('../src/prismaClient');
 
-const TEST_DB_URI = 'mongodb://localhost:27017/sweetshop_test_sweets';
-
-let token;
+let adminToken;
+let userToken;
 let sweetId;
 
 beforeAll(async () => {
-  await mongoose.connect(TEST_DB_URI);
+  await prisma.sales.deleteMany({});
+  await prisma.cart.deleteMany({});
+  await prisma.sweet.deleteMany({});
+  await prisma.user.deleteMany({});
 
-  await User.deleteMany({});
-  await Sweet.deleteMany({});
-
-  // ✅ CREATE ADMIN USER (CRITICAL FIX)
-  const hashed = await bcrypt.hash('password123', 10);
-  await User.create({
-    email: 'admin@test.com',
-    password: hashed,
-    name: 'Admin',
-    role: 'ADMIN' // ⭐ REQUIRED FOR DELETE
+  // Setup Admin
+  const adminHashed = await bcrypt.hash('adminpass', 10);
+  await prisma.user.create({
+    data: { email: 'admin@test.com', password: adminHashed, name: 'Admin', role: 'ADMIN' }
   });
 
-  // Login
-  const res = await request(app)
-    .post('/api/auth/login')
-    .send({ email: 'admin@test.com', password: 'password123' });
+  const adminLogin = await request(app).post('/api/auth/login').send({ email: 'admin@test.com', password: 'adminpass' });
+  adminToken = adminLogin.headers['set-cookie'][0].split(';')[0].split('=')[1];
 
-  expect(res.status).toBe(200);
-  expect(res.body.token).toBeTruthy();
-  token = res.body.token;
+  // Setup Regular User
+  const userHashed = await bcrypt.hash('userpass', 10);
+  await prisma.user.create({
+    data: { email: 'user@test.com', password: userHashed, name: 'User', role: 'USER' }
+  });
+
+  const userLogin = await request(app).post('/api/auth/login').send({ email: 'user@test.com', password: 'userpass' });
+  userToken = userLogin.headers['set-cookie'][0].split(';')[0].split('=')[1];
 });
 
 afterAll(async () => {
-  await Sweet.deleteMany({});
-  await User.deleteMany({});
-  await mongoose.connection.close();
+  await prisma.sales.deleteMany({});
+  await prisma.cart.deleteMany({});
+  await prisma.sweet.deleteMany({});
+  await prisma.user.deleteMany({});
+  await prisma.$disconnect();
 });
 
-describe('🍬 Sweets API', () => {
+describe('🍬 Sweets API - Comprehensive', () => {
 
-  test('POST /api/sweets - create sweet', async () => {
+  test('Regular USER cannot create a sweet', async () => {
     const res = await request(app)
       .post('/api/sweets')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({
+        name: 'Illegal Sweet',
+        category: 'Milk',
+        price: 50,
+        quantity: 10,
+        imageUrl: 'http://example.com/sweet.jpg'
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/Admin required/i);
+  });
+
+  test('ADMIN POST /api/sweets - create sweet', async () => {
+    const res = await request(app)
+      .post('/api/sweets')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         name: 'Gulab Jamun',
         category: 'Milk',
@@ -59,36 +74,103 @@ describe('🍬 Sweets API', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Gulab Jamun');
-    sweetId = res.body._id;
-    expect(sweetId).toBeTruthy();
+    sweetId = res.body._id || res.body.id;
+  });
+
+  test('ADMIN POST /api/sweets - upsert existing sweet updates it', async () => {
+    const res = await request(app)
+      .post('/api/sweets')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Gulab Jamun', // Same name
+        category: 'Milk',
+        price: 60, // Changed
+        quantity: 20, // Changed
+        imageUrl: 'http://example.com/gulab.jpg'
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.price).toBe(60);
+    expect(res.body.quantity).toBe(20);
   });
 
   test('GET /api/sweets - list sweets', async () => {
     const res = await request(app).get('/api/sweets');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBe(1);
   });
 
-  test('POST /api/sweets/:id/purchase - purchase sweet', async () => {
+  test('ADMIN PUT /api/sweets/:id - edit sweet', async () => {
+    const res = await request(app)
+      .put(`/api/sweets/${sweetId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ price: 70 });
+
+    expect(res.status).toBe(200);
+
+    // N-tier update returns the updated object directly
+    expect(res.body.price).toBe(70);
+  });
+
+  test('POST /api/sweets/:id/purchase - purchase sweet successfully', async () => {
     const res = await request(app)
       .post(`/api/sweets/${sweetId}/purchase`)
-      .set('Authorization', `Bearer ${token}`) // ⭐ REQUIRED (401 FIX)
-      .send({ quantity: 2 });
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ quantity: 5 });
 
     expect(res.status).toBe(200);
 
-    const updated = await Sweet.findById(sweetId);
-    expect(updated.quantity).toBe(8);
+    const updated = await prisma.sweet.findUnique({ where: { id: sweetId } });
+    expect(updated.quantity).toBe(15); // 20 - 5
   });
 
-  test('DELETE /api/sweets/:id - delete sweet', async () => {
+  test('POST /api/sweets/:id/purchase - insufficient stock returns 400', async () => {
+    const res = await request(app)
+      .post(`/api/sweets/${sweetId}/purchase`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ quantity: 50 }); // Only 15 left
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/insufficient stock/i);
+  });
+
+  test('ADMIN POST /api/sweets/:id/restock', async () => {
+    const res = await request(app)
+      .post(`/api/sweets/${sweetId}/restock`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ quantity: 10 });
+
+    expect(res.status).toBe(200);
+    const updated = await prisma.sweet.findUnique({ where: { id: sweetId } });
+    expect(updated.quantity).toBe(25); // 15 + 10
+  });
+
+  test('USER POST /api/sweets/:id/restock - access denied', async () => {
+    const res = await request(app)
+      .post(`/api/sweets/${sweetId}/restock`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ quantity: 10 });
+
+    expect(res.status).toBe(403);
+  });
+
+  test('USER DELETE /api/sweets/:id - access denied', async () => {
     const res = await request(app)
       .delete(`/api/sweets/${sweetId}`)
-      .set('Authorization', `Bearer ${token}`);
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  test('ADMIN DELETE /api/sweets/:id - works', async () => {
+    const res = await request(app)
+      .delete(`/api/sweets/${sweetId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
 
-    const check = await Sweet.findById(sweetId);
+    const check = await prisma.sweet.findUnique({ where: { id: sweetId } });
     expect(check).toBeNull();
   });
 });

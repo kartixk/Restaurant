@@ -1,0 +1,37 @@
+﻿
+D:\sweet-shop-management-system\sweet-shop-frontend\src\components\features\admin\AddSweetForm.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\components\features\admin\InventoryList.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\components\features\admin\SalesOverview.jsx
+    2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   46:5   error  'AnimatedNumber' is defined but never used                                     no-unused-vars
+  146:63  error  'sIndex' is defined but never used                                             no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\components\features\cart\CartItem.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\components\features\cart\CheckoutSummary.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\pages\Admin.jsx
+  8:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\pages\Cart.jsx
+  8:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\pages\Login.jsx
+  4:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\pages\Register.jsx
+  5:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\sweet-shop-management-system\sweet-shop-frontend\src\pages\Sweets.jsx
+  10:10  error    'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                no-unused-vars
+  56:5   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/immutability')
+
+Γ£û 13 problems (12 errors, 1 warning)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

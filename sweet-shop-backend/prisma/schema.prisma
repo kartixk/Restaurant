@@ -12,28 +12,49 @@ model User {
   email     String   @unique
   password  String
   name      String?
-  role      Role     @default(USER)
+  phone     String
+  role      Role     @default(CUSTOMER)
+  isVerified Boolean @default(true)
   createdAt DateTime @default(now())
   cart      Cart?
   sales     Sales[]
+  managedBranch Branch? @relation("BranchManager")
+  branchId   String?    @db.ObjectId
 }
 
 enum Role {
-  USER
+  CUSTOMER
+  MANAGER
   ADMIN
 }
 
-model Sweet {
+model Branch {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String   @unique
+  location  String
+  address   String?
+  phone     String?
+  manager   User     @relation("BranchManager", fields: [managerId], references: [id])
+  managerId String     @unique @db.ObjectId
+  products  Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
   price     Float
   category  String
   quantity  Int
   imageUrl  String
+  branchId  String   @db.ObjectId
+  branch    Branch   @relation(fields: [branchId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  // Relations are optional in NoSQL but can be useful for Prisma
-  // However, existing data has ObjectIds stored.
+
+  @@index([category])
+  @@index([branchId])
 }
 
 model Cart {
@@ -45,8 +66,8 @@ model Cart {
 }
 
 type CartItem {
-  sweet             String @db.ObjectId
-  sweetName         String
+  productId         String @db.ObjectId
+  productName       String
   price             Float
   availableQuantity Int
   selectedQuantity  Int
@@ -60,11 +81,14 @@ model Sales {
   orderTotal Float
   status     String     @default("PLACED")
   createdAt  DateTime   @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 type SaleItem {
-  sweet      String @db.ObjectId
-  sweetName  String
+  productId  String @db.ObjectId
+  productName String
   price      Float
   quantity   Int
   totalPrice Float

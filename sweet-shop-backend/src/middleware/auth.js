@@ -7,20 +7,19 @@ const JWT_SECRET = process.env.JWT_SECRET || "change_this_now";
    AUTH MIDDLEWARE
 ========================= */
 function authMiddleware(req, res, next) {
-  const header = req.headers.authorization;
-
-  // 1. Header check
-  if (!header) {
-    return res.status(401).json({ error: "Authorization header required" });
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer ")
+  ) {
+    token = req.headers.authorization.replace("Bearer", "").trim();
+  } else if (req.cookies.token) {
+    token = req.cookies.token;
   }
 
-  // 2. Bearer format check
-  if (!header.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Header must start with 'Bearer '" });
+  if (!token) {
+    return res.status(401).json({ error: "Authorization required" });
   }
-
-  // 3. Extract token safely
-  const token = header.replace("Bearer", "").trim();
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);

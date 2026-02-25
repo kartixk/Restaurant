@@ -1,38 +1,38 @@
-﻿const User = require('../src/models/User');
-const Sweet = require('../src/models/Sweet');
+﻿const { sweetSchema } = require('../src/validators/sweetValidator');
+const { registerSchema } = require('../src/validators/authValidator');
 
-describe('Model validation (no DB)', () => {
+describe('Schema validation (Zod replacing Mongoose)', () => {
 
-  test('User missing email fails', () => {
-    const u = new User({ password: '123456' });
-    const err = u.validateSync();
-    expect(err).toBeTruthy();
-    expect(err.errors).toHaveProperty('email');
+  test('User missing name is valid, but missing email fails', () => {
+    const result = registerSchema.safeParse({ password: '123' });
+    expect(result.success).toBe(false);
+    expect(result.error.flatten().fieldErrors).toHaveProperty('email');
   });
 
   test('Sweet negative price fails', () => {
-    const s = new Sweet({
+    const s = {
       name: 'Bad Sweet',
       category: 'Milk',
       price: -10,
       quantity: 5,
       imageUrl: 'http://example.com/bad.jpg'
-    });
+    };
 
-    const err = s.validateSync();
-    expect(err).toBeTruthy();
-    expect(err.errors).toHaveProperty('price');
+    const result = sweetSchema.safeParse(s);
+    expect(result.success).toBe(false);
+    expect(result.error.flatten().fieldErrors).toHaveProperty('price');
   });
 
   test('Sweet valid data passes', () => {
-    const s = new Sweet({
+    const s = {
       name: 'Ladoo',
       category: 'Milk',
       price: 20,
       quantity: 3,
       imageUrl: 'http://example.com/ladoo.jpg'
-    });
+    };
 
-    expect(s.validateSync()).toBeUndefined();
+    const result = sweetSchema.safeParse(s);
+    expect(result.success).toBe(true);
   });
 });
