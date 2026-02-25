@@ -637,7 +637,7 @@ export default function Admin() {
           </nav>
 
           {/* Bottom Collapse Button */}
-          <div style={{ marginTop: "auto", padding: isSidebarCollapsed ? "16px 12px" : "16px", borderTop: "1px solid #e2e8f0" }}>
+          <div style={{ marginTop: "auto", padding: isSidebarCollapsed ? "16px 8px" : "16px" }}>
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               style={{
@@ -768,87 +768,87 @@ export default function Admin() {
         </div>
       </div>
     </div>
-);
+  );
 }
 
-  // ─── SaaS STYLES ─────────────────────────────────────────────────────────────
-  const getStyles = (isDark) => ({
-    layout: { display: "flex", flexDirection: "row", height: "100vh", backgroundColor: isDark ? "#0f172a" : "#f8fafc", fontFamily: "'Inter', sans-serif", color: isDark ? "#f8fafc" : "#0f172a" },
+// ─── SaaS STYLES ─────────────────────────────────────────────────────────────
+const getStyles = (isDark) => ({
+  layout: { display: "flex", flexDirection: "row", height: "100vh", backgroundColor: isDark ? "#0f172a" : "#f8fafc", fontFamily: "'Inter', sans-serif", color: isDark ? "#f8fafc" : "#0f172a" },
 
-    // Topbar
-    topbar: { height: "64px", backgroundColor: isDark ? "#1e293b" : "#fff", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 1.5rem", flexShrink: 0 },
-    topbarLeft: { display: "flex", alignItems: "center" },
-    topbarRight: { display: "flex", alignItems: "center" },
-    logoIcon: { width: "32px", height: "32px", borderRadius: "8px", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.2rem", fontStyle: "italic", flexShrink: 0 },
-    logoText: { color: isDark ? "#f8fafc" : "#1e293b", fontWeight: "800", letterSpacing: "0.5px", fontSize: "1.25rem", whiteSpace: "nowrap" },
-    collapseBtn: { background: "none", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer", color: isDark ? "#94a3b8" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", borderRadius: "6px", transition: "background 0.2s" },
-    avatarBtn: { width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 5px rgba(236,72,153,0.3)", transition: "transform 0.2s" },
+  // Topbar
+  topbar: { height: "64px", backgroundColor: isDark ? "#1e293b" : "#fff", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 1.5rem", flexShrink: 0 },
+  topbarLeft: { display: "flex", alignItems: "center" },
+  topbarRight: { display: "flex", alignItems: "center" },
+  logoIcon: { width: "32px", height: "32px", borderRadius: "8px", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.2rem", fontStyle: "italic", flexShrink: 0 },
+  logoText: { color: isDark ? "#f8fafc" : "#1e293b", fontWeight: "800", letterSpacing: "0.5px", fontSize: "1.25rem", whiteSpace: "nowrap" },
+  collapseBtn: { background: "none", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer", color: isDark ? "#94a3b8" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", borderRadius: "6px", transition: "background 0.2s" },
+  avatarBtn: { width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 5px rgba(236,72,153,0.3)", transition: "transform 0.2s" },
 
-    // Dropdown
-    dropdownMenu: { position: "absolute", top: "120%", right: "0", width: "220px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
-    dropdownHeader: { padding: "16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-    userName: { fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
-    userEmail: { color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.75rem", marginTop: "2px" },
-    userRoleBadge: { display: "inline-block", marginTop: "6px", padding: "2px 8px", backgroundColor: isDark ? "#334155" : "#e2e8f0", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.65rem", fontWeight: "700", borderRadius: "4px" },
-    dropdownDivider: { height: "1px", backgroundColor: isDark ? "#334155" : "#e2e8f0" },
-    dropdownItemLogout: { display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "12px 16px", border: "none", backgroundColor: isDark ? "#1e293b" : "#fff", color: "#dc2626", fontSize: "0.875rem", fontWeight: "500", cursor: "pointer", transition: "background-color 0.2s" },
+  // Dropdown
+  dropdownMenu: { position: "absolute", top: "120%", right: "0", width: "220px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
+  dropdownHeader: { padding: "16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
+  userName: { fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
+  userEmail: { color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.75rem", marginTop: "2px" },
+  userRoleBadge: { display: "inline-block", marginTop: "6px", padding: "2px 8px", backgroundColor: isDark ? "#334155" : "#e2e8f0", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.65rem", fontWeight: "700", borderRadius: "4px" },
+  dropdownDivider: { height: "1px", backgroundColor: isDark ? "#334155" : "#e2e8f0" },
+  dropdownItemLogout: { display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "12px 16px", border: "none", backgroundColor: isDark ? "#1e293b" : "#fff", color: "#dc2626", fontSize: "0.875rem", fontWeight: "500", cursor: "pointer", transition: "background-color 0.2s" },
 
-    // Notifications
-    iconBtn: { background: "none", border: "none", color: isDark ? "#94a3b8" : "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s", position: "relative" },
-    notificationDot: { position: "absolute", top: "2px", right: "2px", backgroundColor: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: "bold", width: "16px", height: "16px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" },
-    notificationsDropdown: { position: "absolute", top: "120%", right: "0", width: "380px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
-    notificationsHeader: { padding: "12px 16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
-    notificationItem: { padding: "16px", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", transition: "background-color 0.15s", ":hover": { backgroundColor: isDark ? "#334155" : "#f8fafc" } },
-    approveBtn: { backgroundColor: "#10b981", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: "600", cursor: "pointer", transition: "background 0.2s", alignSelf: "center", boxShadow: "0 1px 2px rgba(16, 185, 129, 0.2)" },
+  // Notifications
+  iconBtn: { background: "none", border: "none", color: isDark ? "#94a3b8" : "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s", position: "relative" },
+  notificationDot: { position: "absolute", top: "2px", right: "2px", backgroundColor: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: "bold", width: "16px", height: "16px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" },
+  notificationsDropdown: { position: "absolute", top: "120%", right: "0", width: "380px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
+  notificationsHeader: { padding: "12px 16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
+  notificationItem: { padding: "16px", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", transition: "background-color 0.15s", ":hover": { backgroundColor: isDark ? "#334155" : "#f8fafc" } },
+  approveBtn: { backgroundColor: "#10b981", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: "600", cursor: "pointer", transition: "background 0.2s", alignSelf: "center", boxShadow: "0 1px 2px rgba(16, 185, 129, 0.2)" },
 
-    // Body Layout
-    bodyWrapper: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" },
+  // Body Layout
+  bodyWrapper: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" },
 
-    // Sidebar
-    sidebar: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRight: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)" },
-    sidebarHeader: { height: "64px", display: "flex", alignItems: "center", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, gap: "10px", flexShrink: 0 },
-    sidebarNav: { padding: "16px 12px", display: "flex", flexDirection: "column", gap: "8px" },
-    sidebarNavItem: { display: "flex", alignItems: "center", gap: "12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", cursor: "pointer", transition: "all 0.15s ease", overflow: "hidden" },
-    sidebarNavItemActive: { backgroundColor: isDark ? "#334155" : "#f1f5f9", color: isDark ? "#f8fafc" : "#0f172a", fontWeight: 600 },
-    sidebarIcon: { display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", flexShrink: 0 },
+  // Sidebar
+  sidebar: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRight: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)" },
+  sidebarHeader: { height: "64px", display: "flex", alignItems: "center", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, gap: "10px", flexShrink: 0 },
+  sidebarNav: { padding: "16px 12px", display: "flex", flexDirection: "column", gap: "8px" },
+  sidebarNavItem: { display: "flex", alignItems: "center", gap: "12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", cursor: "pointer", transition: "all 0.15s ease", overflow: "hidden" },
+  sidebarNavItemActive: { backgroundColor: isDark ? "#334155" : "#f1f5f9", color: isDark ? "#f8fafc" : "#0f172a", fontWeight: 600 },
+  sidebarIcon: { display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", flexShrink: 0 },
 
-    // Main Area
-    mainArea: { flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", color: isDark ? "#f8fafc" : "#0f172a" },
-    mainContent: { maxWidth: "1200px", width: "100%", margin: "0 auto", padding: "2.5rem 2rem" },
-    headerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" },
+  // Main Area
+  mainArea: { flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", color: isDark ? "#f8fafc" : "#0f172a" },
+  mainContent: { maxWidth: "1200px", width: "100%", margin: "0 auto", padding: "2.5rem 2rem" },
+  headerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" },
 
-    // Typography
-    pageTitle: { fontSize: "1.5rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: "0 0 4px 0", letterSpacing: "-0.01em" },
-    pageSubtitle: { fontSize: "0.875rem", color: isDark ? "#94a3b8" : "#64748b", margin: 0 },
+  // Typography
+  pageTitle: { fontSize: "1.5rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: "0 0 4px 0", letterSpacing: "-0.01em" },
+  pageSubtitle: { fontSize: "0.875rem", color: isDark ? "#94a3b8" : "#64748b", margin: 0 },
 
-    // Stats
-    statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginBottom: "2rem" },
-    statCard: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" },
-    statHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-    statLabel: { fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b" },
-    statValue: { fontSize: "1.875rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", letterSpacing: "-0.02em", lineHeight: "1.2" },
-    trendBadge: { fontSize: "0.75rem", fontWeight: 600, padding: "2px 8px", borderRadius: "100px", alignSelf: "flex-start", display: "inline-flex", alignItems: "center" },
+  // Stats
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginBottom: "2rem" },
+  statCard: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" },
+  statHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  statLabel: { fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b" },
+  statValue: { fontSize: "1.875rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", letterSpacing: "-0.02em", lineHeight: "1.2" },
+  trendBadge: { fontSize: "0.75rem", fontWeight: 600, padding: "2px 8px", borderRadius: "100px", alignSelf: "flex-start", display: "inline-flex", alignItems: "center" },
 
-    // Cards & Tables
-    chartGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.5rem", marginBottom: "2rem" },
-    card: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", display: "flex", flexDirection: "column" },
-    cardHeader: { padding: "1rem 1.25rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-    cardTitle: { fontSize: "0.9rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" },
-    table: { width: "100%", borderCollapse: "collapse" },
-    th: { padding: "0.75rem 1.25rem", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: isDark ? "#94a3b8" : "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-    tr: { borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, transition: "background-color 0.15s", cursor: "pointer" },
-    td: { padding: "1rem 1.25rem", verticalAlign: "middle", color: isDark ? "#f8fafc" : "#0f172a" },
+  // Cards & Tables
+  chartGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.5rem", marginBottom: "2rem" },
+  card: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", display: "flex", flexDirection: "column" },
+  cardHeader: { padding: "1rem 1.25rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
+  cardTitle: { fontSize: "0.9rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { padding: "0.75rem 1.25rem", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: isDark ? "#94a3b8" : "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
+  tr: { borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, transition: "background-color 0.15s", cursor: "pointer" },
+  td: { padding: "1rem 1.25rem", verticalAlign: "middle", color: isDark ? "#f8fafc" : "#0f172a" },
 
-    // Buttons
-    primaryBtn: { padding: "8px 16px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: "#fff", backgroundColor: isDark ? "#3b82f6" : "#0f172a", border: "none", cursor: "pointer" },
-    actionBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#f8fafc" : "#0f172a", backgroundColor: isDark ? "#334155" : "#fff", border: `1px solid ${isDark ? "#475569" : "#cbd5e1"}`, cursor: "pointer", transition: "all 0.15s" },
-    secondaryBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", backgroundColor: isDark ? "#1e293b" : "#fff", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer" },
-    linkBtn: { padding: 0, border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" },
+  // Buttons
+  primaryBtn: { padding: "8px 16px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: "#fff", backgroundColor: isDark ? "#3b82f6" : "#0f172a", border: "none", cursor: "pointer" },
+  actionBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#f8fafc" : "#0f172a", backgroundColor: isDark ? "#334155" : "#fff", border: `1px solid ${isDark ? "#475569" : "#cbd5e1"}`, cursor: "pointer", transition: "all 0.15s" },
+  secondaryBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", backgroundColor: isDark ? "#1e293b" : "#fff", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer" },
+  linkBtn: { padding: 0, border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" },
 
-    // Tabs
-    tabs: { display: "flex", gap: "1.5rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, marginBottom: "1.5rem" },
-    tabBtn: { padding: "0 0 0.75rem 0", border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", borderBottom: "2px solid transparent", transition: "all 0.15s" },
-    tabBtnActive: { color: isDark ? "#f8fafc" : "#0f172a", borderBottomColor: isDark ? "#f8fafc" : "#0f172a" },
+  // Tabs
+  tabs: { display: "flex", gap: "1.5rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, marginBottom: "1.5rem" },
+  tabBtn: { padding: "0 0 0.75rem 0", border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", borderBottom: "2px solid transparent", transition: "all 0.15s" },
+  tabBtnActive: { color: isDark ? "#f8fafc" : "#0f172a", borderBottomColor: isDark ? "#f8fafc" : "#0f172a" },
 
-    emptyState: { padding: "4rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", color: isDark ? "#64748b" : "#94a3b8", fontSize: "0.875rem", textAlign: "center" }
-  });
+  emptyState: { padding: "4rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", color: isDark ? "#64748b" : "#94a3b8", fontSize: "0.875rem", textAlign: "center" }
+});
