@@ -77,10 +77,17 @@ export default function Admin() {
   const role = upperRole ? upperRole.toUpperCase() : null;
   const navigate = useNavigate();
 
+<<<<<<< HEAD
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+=======
+  // ✅ UPDATED: Removed "Classic Indian" from the categories array.
+  const categories = [
+    "Milk", "Laddu", "Halwa", "Barfi", "Traditional Indian", "Dry Fruits"
+  ];
+>>>>>>> origin/main
 
   const [activeSidebarItem, setActiveSidebarItem] = useState("Dashboard");
   const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -208,11 +215,35 @@ export default function Admin() {
   };
   const handleAddProduct = (e) => {
     e.preventDefault();
+<<<<<<< HEAD
     const name = newProduct.name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     addProductMutation.mutate({ ...newProduct, name, branchId: selectedBranchId }, {
       onSuccess: () => { toast.success(`"${name}" added!`); setNewProduct({ name: "", price: "", category: "Main Course", quantity: "", imageUrl: "", branchId: "" }); },
       onError: (err) => handleApiError(err, "Failed to add product")
     });
+=======
+
+    // Format Name: "guLAB jaMUN" -> "Gulab Jamun"
+    const formattedName = newSweet.name
+      .trim()
+      .toLowerCase()
+      .split(/\s+/) 
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1)) 
+      .join(' ');
+
+    const sweetPayload = { ...newSweet, name: formattedName };
+
+    try {
+      await api.post("/sweets", sweetPayload);
+      toast.success(`"${formattedName}" added successfully!`);
+      // Use the first remaining category as default if the removed category was the default
+      const defaultCategory = categories.includes(newSweet.category) ? newSweet.category : categories[0];
+      setNewSweet({ name: "", price: "", category: defaultCategory, quantity: "", imageUrl: "" });
+      fetchSweets(); 
+    } catch (err) { 
+      handleApiError(err, "Failed to add sweet"); 
+    }
+>>>>>>> origin/main
   };
   const handleDeleteProduct = (id) => {
     if (window.confirm("Delete this item?")) deleteProductMutation.mutate(id, {
@@ -256,6 +287,7 @@ export default function Admin() {
           </div>
         </div>
 
+<<<<<<< HEAD
         <div style={S.card}>
           <div style={S.cardHeader}><h2 style={S.cardTitle}>Top Branches</h2></div>
           <div style={{ padding: "1rem" }}>
@@ -277,6 +309,138 @@ export default function Admin() {
                     <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: '0.875rem' }}>{formatCurrency(b.revenue)}</div>
                   </div>
                 ))}
+=======
+        <div style={styles.filterButtons}>
+          {['day', 'week', 'month', 'year', 'all'].map(t => (
+            <button key={t} onClick={() => fetchReport(t)} style={{...styles.filterButton, ...(reportType === t ? styles.filterButtonActive : {})}}>
+              {t === 'day' ? "Today" : t === 'all' ? "All Time" : t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+          <button onClick={downloadExcel} style={styles.downloadButton}>Download Excel</button>
+        </div>
+
+        <div style={styles.tableWrapper}>
+          {reportLoading ? <div style={styles.loadingText}>Loading...</div> : (
+            <table style={styles.table}>
+              <thead style={styles.tableHead}>
+                <tr>
+                  {!isDayView && <th style={styles.tableHeader}>Date</th>}
+                  <th style={styles.tableHeader}>Time</th>
+                  <th style={styles.tableHeader}>Item</th>
+                  <th style={styles.tableHeader}>Qty</th>
+                  <th style={styles.tableHeader}>Item Total</th>
+                </tr>
+              </thead>
+              
+              <tbody>
+                {salesList.length === 0 ? (
+                  <tr><td colSpan={isDayView ? 4 : 5} style={styles.emptyCell}>No sales found.</td></tr>
+                ) : (
+                  // ✅ UPDATED BLOCK: Using flatMap to show every item individually
+                  salesList.flatMap(s =>
+                    s.items.map(item => {
+                      const dateObj = new Date(s.createdAt || s.date);
+                    
+                      return (
+                        <tr key={item._id} style={styles.tableRow}>
+                          {!isDayView && <td style={styles.tableCell}>{dateObj.toLocaleDateString()}</td>}
+                          <td style={{...styles.tableCell, color:'#666'}}>{dateObj.toLocaleTimeString()}</td>
+                          <td style={{...styles.tableCell, fontWeight:'600'}}>{item.sweetName}</td>
+                          <td style={styles.tableCell}>{item.quantity}</td>
+                          <td style={{...styles.tableCell, color:'#28a745', fontWeight:'bold'}}>₹{item.totalPrice}</td>
+                        </tr>
+                      );
+                    })
+                  )
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      <hr style={styles.divider} />
+
+      {/* ADD SWEET FORM */}
+      <div style={styles.addSection}>
+        <h3 style={styles.sectionSubtitle}>Add New Sweet</h3>
+        <form onSubmit={handleAddSweet} style={styles.form}>
+          <input 
+            name="name" 
+            placeholder="Sweet Name" 
+            value={newSweet.name} 
+            onChange={handleChange} 
+            required 
+            style={styles.input} 
+          />
+          
+          <select 
+            name="category" 
+            value={newSweet.category} 
+            onChange={handleChange} 
+            required 
+            style={styles.select}
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          <input 
+            type="number" 
+            name="price" 
+            placeholder="Price (₹)" 
+            value={newSweet.price} 
+            onChange={handleChange} 
+            required 
+            style={styles.input} 
+          />
+          <input 
+            type="number" 
+            name="quantity" 
+            placeholder="Initial Quantity" 
+            value={newSweet.quantity} 
+            onChange={handleChange} 
+            required 
+            style={styles.input} 
+          />
+          <input 
+            name="imageUrl" 
+            placeholder="Image URL (e.g., https://example.com/image.jpg)" 
+            value={newSweet.imageUrl} 
+            onChange={handleChange} 
+            style={styles.inputFull} 
+            required 
+          />
+          <button type="submit" style={styles.addButton}>Add Sweet</button>
+        </form>
+      </div>
+
+      {/* INVENTORY (+/- Buttons) with SEARCH */}
+      <div style={styles.inventoryHeader}>
+        <h3 style={styles.sectionSubtitle}>Inventory Management</h3>
+        <input
+          type="text"
+          placeholder=" Search inventory..."
+          value={inventorySearch}
+          onChange={(e) => setInventorySearch(e.target.value)}
+          style={styles.searchInput}
+        />
+      </div>
+
+      <div style={styles.inventoryCard}>
+        {filteredInventory.length === 0 ? (
+          <div style={{padding: '20px', textAlign: 'center', color: '#888'}}>No sweets match your search.</div>
+        ) : (
+          filteredInventory.map(s => (
+            <div key={s._id} style={styles.inventoryItem}>
+              <div style={styles.inventoryInfo}>
+                <div style={styles.sweetName}>{s.name}</div>
+                <div style={styles.sweetCategory}>({s.category})</div>
+                <div style={s.quantity === 0 ? styles.outOfStock : styles.inStock}>
+                  {s.quantity === 0 ? "Out of Stock" : `${s.quantity} left`}
+                </div>
+>>>>>>> origin/main
               </div>
             )}
           </div>

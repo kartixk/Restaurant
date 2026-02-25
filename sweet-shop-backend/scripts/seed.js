@@ -6,7 +6,7 @@ const Sweet = require("../src/models/Sweet");
 
 async function seed() {
   const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/sweet-shop";
-  await mongoose.connect(MONGO_URI);
+  await mongoose.connect(MONGO_URI, { family: 4 });
 
   await User.deleteMany({});
   await Sweet.deleteMany({});
