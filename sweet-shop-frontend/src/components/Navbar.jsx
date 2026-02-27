@@ -9,10 +9,11 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role, user, logout } = useAuthStore();
-  const cartItems = useCartStore((state) => state.items) || [];
+  const cartData = useCartStore((state) => state.cart);
+  const setIsCartOpen = useCartStore((state) => state.setIsCartOpen);
 
   // Calculate total distinct items in cart
-  const cartItemCount = cartItems.length;
+  const cartItemCount = cartData?.items?.length || 0;
 
   const handleLogout = () => {
     logout();
@@ -20,12 +21,13 @@ export default function Navbar() {
   };
 
   const isActive = (path) => location.pathname === path;
-  const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
-  const isAdminPage = location.pathname.startsWith("/admin");
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/register" || location.pathname === "/signup";
+  const isInternalPage = location.pathname.startsWith("/admin") || location.pathname.startsWith("/manager");
+  const isAdminPage = role === "ADMIN";
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  if (isAdminPage) return null;
+  if (isInternalPage) return null;
 
   return (
     <>
@@ -58,10 +60,10 @@ export default function Navbar() {
                 </Link>
               )}
 
-              {role === "USER" && (
-                <Link to="/cart" style={isActive("/cart") ? styles.activeLink : styles.link}>
+              {(!role || role === "USER") && (
+                <button onClick={() => setIsCartOpen(true)} style={{ ...styles.link, background: 'transparent', border: 'none', cursor: 'pointer' }}>
                   <div style={styles.cartIconWrapper}>
-                    <ShoppingBag size={18} style={isActive("/cart") ? styles.activeIcon : styles.icon} />
+                    <ShoppingBag size={18} style={styles.icon} />
                     {cartItemCount > 0 && (
                       <motion.span
                         initial={{ scale: 0 }}
@@ -73,8 +75,8 @@ export default function Navbar() {
                       </motion.span>
                     )}
                   </div>
-                  <span className="link-text">Cart</span>
-                </Link>
+                  <span className="link-text">Order</span>
+                </button>
               )}
             </div>
           )}
@@ -85,7 +87,7 @@ export default function Navbar() {
               {!role ? (
                 <>
                   <Link to="/login" style={styles.loginBtn}>Sign In</Link>
-                  <Link to="/register" style={styles.signupBtn}>Sign Up</Link>
+                  <Link to="/signup" style={styles.signupBtn}>Sign Up</Link>
                 </>
               ) : (
                 <div style={{ position: 'relative' }}>

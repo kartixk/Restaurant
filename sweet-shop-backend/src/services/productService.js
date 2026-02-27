@@ -31,26 +31,27 @@ const upsertProduct = async (data) => {
         throw new Error("Branch ID is required to add or update a product");
     }
 
-    // Prisma Upsert scoped by name AND branchId to allow same item name in different branches
+    const isAvailable = data.isAvailable !== undefined ? data.isAvailable === "true" || data.isAvailable === true : true;
+
     const product = await prisma.product.upsert({
         where: {
-            // MongoDB unique constraint was on Name only previously, 
-            // but for multi-store we might want Name-Branch uniqueness
-            id: data.id || "000000000000000000000000" // Use ID if provided, otherwise a dummy for new
+            id: data.id || "000000000000000000000000"
         },
         update: {
             name: formattedName,
+            description: data.description || null,
             price: data.price,
             category: data.category,
-            quantity: data.quantity,
+            isAvailable: isAvailable,
             imageUrl: data.imageUrl,
             branchId: data.branchId
         },
         create: {
             name: formattedName,
+            description: data.description || null,
             price: data.price,
             category: data.category,
-            quantity: data.quantity,
+            isAvailable: isAvailable,
             imageUrl: data.imageUrl,
             branchId: data.branchId
         },
@@ -63,6 +64,13 @@ const updateProductById = async (id, data) => {
     if (updateData.name) {
         updateData.name = toTitleCase(updateData.name);
     }
+
+    if (updateData.isAvailable !== undefined) {
+        updateData.isAvailable = updateData.isAvailable === "true" || updateData.isAvailable === true;
+    }
+
+    // Remove old 'quantity' references if passed by frontend
+    if ('quantity' in updateData) delete updateData.quantity;
 
     const updatedProduct = await prisma.product.update({
         where: { id },
@@ -80,22 +88,21 @@ const purchaseProduct = async (productId, userId, quantityToBuy) => {
     return await prisma.$transaction(async (tx) => {
         const product = await tx.product.findUnique({ where: { id: productId } });
 
-        if (!product || product.quantity < quantityToBuy) {
-            throw new Error("Purchase failed: insufficient stock or product not found");
+        if (!product || !product.isAvailable) {
+            throw new Error("Purchase failed: product is currently unavailable or not found");
         }
 
-        const updatedProduct = await tx.product.update({
-            where: { id: productId },
-            data: { quantity: { decrement: quantityToBuy } },
-        });
+        const totalPrice = product.price * quantityToBuy;
 
-        const totalPrice = updatedProduct.price * quantityToBuy;
+        const updatedProduct = product;
 
-        await tx.sales.create({
+        await tx.order.create({
             data: {
                 userId: userId,
+                branchId: product.branchId,
                 orderTotal: totalPrice,
-                status: "PLACED",
+                orderType: "TAKEAWAY", // Default for direct purchase
+                status: "RECEIVED",
                 items: [
                     {
                         productId: product.id,
@@ -112,12 +119,17 @@ const purchaseProduct = async (productId, userId, quantityToBuy) => {
     });
 };
 
-const restockProduct = async (productId, quantity) => {
+const setProductAvailability = async (productId, isAvailable) => {
     const product = await prisma.product.update({
         where: { id: productId },
-        data: { quantity: { increment: quantity } },
+        data: { isAvailable: isAvailable },
     });
     return product;
+};
+
+// Kept for backwards compatibility but changed to availability
+const restockProduct = async (productId, quantity) => {
+    return setProductAvailability(productId, true);
 };
 
 module.exports = {
@@ -127,4 +139,5 @@ module.exports = {
     deleteProductById,
     purchaseProduct,
     restockProduct,
+    setProductAvailability
 };

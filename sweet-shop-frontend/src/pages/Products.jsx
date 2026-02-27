@@ -1,26 +1,21 @@
+// src/pages/Products.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
 import { useProducts } from "../hooks/useProducts";
-import { useAddToCart, useFastBuy } from "../hooks/useCart";
+import { useAddToCart } from "../hooks/useCart";
 import useAuthStore from "../store/useAuthStore";
 import useCartStore from "../store/useCartStore";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import "./Products.css";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Products() {
   const [selectedBranch, setSelectedBranch] = useState(null);
-  const { data: productsData = [], error: productsError, refetch: refetchProducts } = useProducts(selectedBranch);
+  const { data: productsData = [], error: productsError } = useProducts(selectedBranch);
   const addToCartMutation = useAddToCart();
-  const fastBuyMutation = useFastBuy();
 
-  const quantities = useCartStore((state) => state.quantities);
-  const setQuantity = useCartStore((state) => state.setQuantity);
-  const clearQuantity = useCartStore((state) => state.clearQuantity);
+  // Zustand State
+  const { quantities, setQuantity, clearQuantity, orderType, setOrderType } = useCartStore();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -29,313 +24,140 @@ export default function Products() {
   const { isAuthenticated, role: upperRole } = useAuthStore();
   const role = upperRole ? upperRole.toLowerCase() : null;
 
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-input[type = "number"]:: -webkit - inner - spin - button,
-  input[type = "number"]:: -webkit - outer - spin - button {
-  -webkit - appearance: none;
-  margin: 0;
-}
-input[type = "number"] {
-  -moz - appearance: textfield;
-}
-`;
-    document.head.appendChild(style);
-    return () => { document.head.removeChild(style); };
-  }, []);
-
   const products = [...productsData].sort((a, b) => a.name.localeCompare(b.name));
 
   useEffect(() => {
-    if (productsError) {
-      console.error("Failed to fetch products", productsError);
-      toast.error(" Failed to load menu items.");
-    }
+    if (productsError) toast.error("Failed to load menu items.");
   }, [productsError]);
 
   /* --- QUANTITY HANDLERS --- */
-  const increaseQty = (productId, maxStock) => {
+  const handleQuantityChange = (productId, delta, maxStock) => {
     const currentQty = quantities[productId] || 1;
-    if (currentQty < maxStock) {
-      setQuantity(productId, currentQty + 1);
-    } else {
-      toast.warning(` Max quantity is ${maxStock} `);
+    const newQty = currentQty + delta;
+    if (newQty >= 1 && newQty <= maxStock) {
+      setQuantity(productId, newQty);
+    } else if (newQty > maxStock) {
+      toast.warning(`Only ${maxStock} available`);
     }
-  };
-
-  const decreaseQty = (productId) => {
-    const currentQty = quantities[productId] || 1;
-    if (currentQty > 1) {
-      setQuantity(productId, currentQty - 1);
-    }
-  };
-
-  const handleQuantityChange = (productId, value, maxStock) => {
-    const numValue = parseInt(value) || 1;
-    if (numValue >= 1 && numValue <= maxStock) {
-      setQuantity(productId, numValue);
-    } else if (numValue > maxStock) {
-      setQuantity(productId, maxStock);
-    }
-  };
-
-  /* --- NEW: PDF GENERATOR FUNCTION --- */
-  const generateSingleInvoice = (product, quantity) => {
-    const doc = new jsPDF();
-
-    doc.setFontSize(18);
-    doc.text("FoodFlow - Order Invoice", 14, 20);
-
-    doc.setFontSize(12);
-    doc.text(`Date: ${new Date().toLocaleDateString()} `, 14, 30);
-    doc.text(`Branch: ${product.branchName || "Main"}`, 14, 36);
-    doc.text(`Status: Paid (Instant Buy)`, 14, 42);
-
-    const total = product.price * quantity;
-    const tableColumn = ["Item Name", "Price (Rs)", "Qty", "Subtotal (Rs)"];
-    const tableRows = [[
-      product.name,
-      product.price,
-      quantity,
-      total
-    ]];
-
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 50,
-    });
-
-    const finalY = (doc.lastAutoTable?.finalY || 50) + 10;
-    doc.setFontSize(14);
-    doc.text(`Grand Total: Rs ${total}`, 14, finalY);
-
-    doc.save(`Invoice_${Date.now()}.pdf`);
-  };
-
-  const handleFastBuy = (product) => {
-    const qty = quantities[product.id || product._id] || 1;
-    if (!isAuthenticated) return navigate("/login");
-    if (role === 'admin') return toast.warning(" Admins cannot buy items! ");
-
-    fastBuyMutation.mutate({ productId: product.id || product._id, quantity: qty }, {
-      onSuccess: () => {
-        toast.success(` Bought ${qty} ${product.name}(s)! Downloading Invoice... ✨ `);
-        generateSingleInvoice(product, qty);
-        clearQuantity(product.id || product._id);
-      },
-      onError: (err) => {
-        console.error(err);
-        toast.error(err.response?.data?.message || " Purchase failed.");
-      }
-    });
   };
 
   const handleAddToCart = (product) => {
-    const qty = quantities[product.id || product._id] || 1;
     if (!isAuthenticated) return navigate("/login");
-    if (role === 'admin') return toast.warning(" Admins cannot add items! ");
+    if (role === 'admin' || role === 'manager') return toast.warning("Staff cannot place orders here.");
 
-    addToCartMutation.mutate({ productId: product.id || product._id, quantity: qty }, {
+    const qty = quantities[product.id || product._id] || 1;
+
+    // Pass orderType to the mutation here
+    addToCartMutation.mutate({ productId: product.id || product._id, quantity: qty, orderType }, {
       onSuccess: () => {
-        toast.success(` ${qty} ${product.name} added to cart! 🛒 `);
+        toast.success(`Added to cart (${orderType.replace('_', ' ')}) 🛒`);
         clearQuantity(product.id || product._id);
       },
       onError: (err) => {
-        console.error(err);
-        toast.error(err.response?.data?.message || " Failed to add to cart.");
+        toast.error(err.response?.data?.message || "Failed to add to cart.");
       }
     });
   };
 
-  const handleError = (err, toastId) => {
-    console.error(err);
-    const errorMsg = err.response?.data?.message || "Action failed";
-
-    if (err.response?.status === 401 || err.response?.status === 403) {
-      toast.update(toastId, {
-        render: " Session expired. Login required.",
-        type: "error",
-        isLoading: false,
-        autoClose: 2000,
-      });
-      setTimeout(() => navigate("/login"), 1500);
-    } else {
-      toast.update(toastId, {
-        render: ` ${errorMsg} `,
-        type: "error",
-        isLoading: false,
-        autoClose: 3000,
-      });
-      if (errorMsg.toLowerCase().includes("stock")) refetchProducts();
-    }
-  };
-
-  const getCleanCategory = (category) => {
-    if (!category) return "";
-    return category.toUpperCase().trim();
-  };
-
-  const uniqueCategories = [...new Set(products.map(s => getCleanCategory(s.category)))];
-  uniqueCategories.sort();
-  const categories = ["ALL", ...uniqueCategories];
+  const uniqueCategories = ["ALL", ...[...new Set(products.map(s => s.category?.toUpperCase().trim() || ""))].sort()];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const currentCategory = getCleanCategory(product.category);
-    const matchesCategory = selectedCategory === "ALL" || currentCategory === selectedCategory;
+    const matchesCategory = selectedCategory === "ALL" || (product.category?.toUpperCase().trim() || "") === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   return (
-    <motion.div
-      className="sweets-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+    <div style={styles.container}>
+      <ToastContainer position="top-right" autoClose={2000} theme="dark" />
 
-      <section className="hero-section">
-        <div className="hero-background-effects">
-          <div className="glow-orb orb-1"></div>
-          <div className="glow-orb orb-2"></div>
-        </div>
+      {/* --- PREMIUM HERO SECTION --- */}
+      <section style={styles.heroSection}>
+        <motion.h1 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={styles.heroTitle}>
+          Crave It. <span style={{ color: '#FF5A00' }}>Order It.</span>
+        </motion.h1>
 
-        <div className="hero-content">
-          <motion.h1
-            className="hero-title"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.6 }}
+        {/* QSR ORDER TYPE TOGGLE */}
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }} style={styles.toggleContainer}>
+          <button
+            style={{ ...styles.toggleBtn, ...(orderType === 'DINE_IN' ? styles.toggleActive : {}) }}
+            onClick={() => setOrderType('DINE_IN')}
           >
-            Explore Our Fine Dining Menu
-          </motion.h1>
-
-          <motion.p
-            className="hero-subtitle"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
+            🍽️ Dine-in
+          </button>
+          <button
+            style={{ ...styles.toggleBtn, ...(orderType === 'TAKEAWAY' ? styles.toggleActive : {}) }}
+            onClick={() => setOrderType('TAKEAWAY')}
           >
-            Savor the flavors from our various branches.
-          </motion.p>
+            🛍️ Takeaway
+          </button>
+        </motion.div>
 
-          <motion.div
-            className="search-glass-container"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-          >
-            <div className="search-wrapper">
-              <svg className="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search for your favorite dishes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-            </div>
-
-            <div className="category-pills">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`pill-btn ${selectedCategory === cat ? 'active' : ''}`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        </div>
+        {/* SEARCH & FILTERS */}
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} style={styles.filterBar}>
+          <input
+            type="text"
+            placeholder="Search the menu..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
+          />
+          <div style={styles.categoryScroller}>
+            {uniqueCategories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                style={{ ...styles.catPill, ...(selectedCategory === cat ? styles.catPillActive : {}) }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </motion.div>
       </section>
 
-      <div className="catalog-header">
-        <h2 className="section-title">Menu Highlights</h2>
-        <span className="results-count">Showing {filteredProducts.length} items</span>
-      </div>
-
-      <motion.div
-        className="sweets-grid"
-        variants={{
-          hidden: { opacity: 0 },
-          show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-        }}
-        initial="hidden"
-        animate="show"
-      >
+      {/* --- MENU GRID --- */}
+      <motion.div style={styles.grid} initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
         <AnimatePresence>
           {filteredProducts.map((product) => (
             <motion.div
-              key={product._id}
-              className="sweet-card"
-              variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0 } }}
-              whileHover={{ y: -8, boxShadow: "0 20px 40px rgba(0,0,0,0.12)", transition: { duration: 0.2 } }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
+              key={product._id || product.id}
+              variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
+              whileHover={{ y: -5 }}
+              style={styles.card}
             >
-              <div className="card-image-wrapper">
-                <img
-                  src={product.imageUrl || "https://placehold.co/300x200?text=No+Image"}
-                  alt={product.name}
-                  className="card-image"
-                  onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/300x200?text=Image+Not+Found"; }}
-                />
-                {product.quantity === 0 && <div className="out-of-stock-badge">Sold Out</div>}
-                <div className="image-overlay"></div>
+              <div style={styles.imageWrapper}>
+                <img src={product.imageUrl} alt={product.name} style={styles.image} />
+                {!product.isAvailable && <div style={styles.soldOutBadge}>Sold Out</div>}
               </div>
 
-              <div className="card-content">
-                <div className="card-header">
-                  <h3 className="sweet-name">{product.name}</h3>
-                  <span className="category-tag">{getCleanCategory(product.category)}</span>
+              <div style={styles.cardContent}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <h3 style={styles.productName}>{product.name}</h3>
+                  <span style={styles.price}>₹{product.price}</span>
                 </div>
 
-                <div className="branch-tag" style={{ fontSize: '0.8rem', color: '#6366f1', fontWeight: '600', marginBottom: '8px' }}>
-                  📍 {product.branchName || "Main Branch"}
-                </div>
+                <p style={styles.description}>{product.description || "Premium quality ingredients crafted to perfection."}</p>
 
-                <div className="card-details">
-                  <span className="price-tag">₹{product.price}</span>
-                  <div className={`stock-status ${product.quantity === 0 ? 'out-stock' : product.quantity < 10 ? 'low-stock' : 'in-stock'}`}>
-                    {product.quantity > 0 ? `${product.quantity} available` : "Unavailable"}
-                  </div>
-                </div>
-
-                {role !== "admin" && (
-                  <div className="action-section">
-                    {!role ? (
-                      <button onClick={() => navigate("/login")} className="login-message-btn">Login to Order</button>
-                    ) : (
+                {role !== "admin" && role !== "manager" && (
+                  <div style={styles.actionRow}>
+                    {product.isAvailable !== false ? (
                       <>
-                        {product.quantity > 0 ? (
-                          <div className="purchase-controls">
-                            <div className="quantity-wrapper">
-                              <button onClick={() => decreaseQty(product._id)} className="qty-btn">-</button>
-                              <input
-                                type="number"
-                                value={quantities[product._id] || 1}
-                                onChange={(e) => handleQuantityChange(product._id, e.target.value, product.quantity)}
-                                className="qty-input"
-                              />
-                              <button onClick={() => increaseQty(product._id, product.quantity)} className="qty-btn">+</button>
-                            </div>
-
-                            <div className="button-group">
-                              <motion.button onClick={() => handleAddToCart(product)} className="btn-add-cart" whileTap={{ scale: 0.95 }}>Add to Cart</motion.button>
-                              <motion.button onClick={() => handleFastBuy(product)} className="btn-buy-now" whileTap={{ scale: 0.95 }}>Order Now</motion.button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button className="unavailable-btn" disabled>Currently Unavailable</button>
-                        )}
+                        <div style={styles.stepper}>
+                          <button onClick={() => handleQuantityChange(product._id || product.id, -1, 99)} style={styles.stepBtn}>-</button>
+                          <span style={styles.stepText}>{quantities[product._id || product.id] || 1}</span>
+                          <button onClick={() => handleQuantityChange(product._id || product.id, 1, 99)} style={styles.stepBtn}>+</button>
+                        </div>
+                        <motion.button
+                          onClick={() => handleAddToCart(product)}
+                          style={styles.addBtn}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Add +
+                        </motion.button>
                       </>
+                    ) : (
+                      <button style={styles.disabledBtn} disabled>Currently Unavailable</button>
                     )}
                   </div>
                 )}
@@ -344,6 +166,41 @@ input[type = "number"] {
           ))}
         </AnimatePresence>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
+
+// Inline Styles for the Midnight & Flame Design System
+const styles = {
+  container: { backgroundColor: '#F8FAFC', minHeight: '100vh', padding: '2rem', fontFamily: "'Inter', sans-serif" },
+  heroSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem', paddingTop: '2rem' },
+  heroTitle: { fontSize: '3.5rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em', marginBottom: '2rem', textAlign: 'center' },
+
+  toggleContainer: { display: 'flex', background: '#FFFFFF', padding: '6px', borderRadius: '12px', marginBottom: '2rem', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
+  toggleBtn: { flex: 1, padding: '12px 32px', border: 'none', background: 'transparent', color: '#64748B', fontSize: '1rem', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' },
+  toggleActive: { background: '#FF5A00', color: '#FFFFFF', boxShadow: '0 4px 12px rgba(255, 90, 0, 0.3)' },
+
+  filterBar: { width: '100%', maxWidth: '1000px', display: 'flex', flexDirection: 'column', gap: '1rem' },
+  searchInput: { width: '100%', padding: '16px 24px', borderRadius: '12px', background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: '1rem', outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' },
+  categoryScroller: { display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none' },
+  catPill: { padding: '8px 20px', borderRadius: '100px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#64748B', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' },
+  catPillActive: { background: '#0F172A', color: '#FFFFFF', border: '1px solid #0F172A' },
+
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem', maxWidth: '1400px', margin: '0 auto' },
+  card: { background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02)' },
+  imageWrapper: { position: 'relative', width: '100%', paddingTop: '65%', backgroundColor: '#F1F5F9' },
+  image: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' },
+  soldOutBadge: { position: 'absolute', top: '12px', right: '12px', background: '#FFFFFF', color: '#EF4444', padding: '6px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '0.8rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' },
+
+  cardContent: { padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1 },
+  productName: { fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0', letterSpacing: '-0.02em' },
+  price: { fontSize: '1.25rem', fontWeight: 800, color: '#FF5A00' },
+  description: { color: '#64748B', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '1.5rem', flex: 1 },
+
+  actionRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' },
+  stepper: { display: 'flex', alignItems: 'center', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' },
+  stepBtn: { width: '36px', height: '36px', background: 'transparent', border: 'none', color: '#0F172A', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 600 },
+  stepText: { width: '24px', textAlign: 'center', color: '#0F172A', fontWeight: 700 },
+  addBtn: { flex: 1, padding: '12px', background: '#FF5A00', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 10px rgba(255, 90, 0, 0.2)' },
+  disabledBtn: { flex: 1, padding: '12px', background: '#F1F5F9', color: '#94A3B8', border: 'none', borderRadius: '8px', fontWeight: 700 }
+};

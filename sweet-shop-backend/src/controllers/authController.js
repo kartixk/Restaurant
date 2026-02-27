@@ -12,7 +12,7 @@ const register = async (req, res, next) => {
         });
 
         res.status(201).json({
-            user: { id: user.id, _id: user.id, email: user.email, name: user.name, role: user.role },
+            user: { id: user.id, _id: user.id, email: user.email, name: user.name, role: user.role, isVerified: user.isVerified },
         });
     } catch (err) {
         if (err.message === "Email already in use") {
@@ -34,7 +34,7 @@ const login = async (req, res, next) => {
         });
 
         res.json({
-            user: { id: user.id, _id: user.id, email: user.email, name: user.name, role: user.role },
+            user: { id: user.id, _id: user.id, email: user.email, name: user.name, role: user.role, isVerified: user.isVerified },
         });
     } catch (err) {
         if (err.message === "Invalid credentials" || err.message === "Account pending admin approval") {
@@ -53,8 +53,21 @@ const logout = (req, res) => {
     res.status(200).json({ status: 'success' });
 };
 
+const updateProfile = async (req, res, next) => {
+    try {
+        const user = await userService.updateProfile(req.user.id, req.body);
+        res.status(200).json({
+            message: "Profile updated successfully",
+            user: { id: user.id, _id: user.id, email: user.email, name: user.name, role: user.role, isVerified: user.isVerified }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     register,
     login,
-    logout
+    logout,
+    updateProfile
 };

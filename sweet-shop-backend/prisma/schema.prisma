@@ -8,18 +8,18 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  password  String
-  name      String?
-  phone     String
-  role      Role     @default(CUSTOMER)
-  isVerified Boolean @default(true)
-  createdAt DateTime @default(now())
-  cart      Cart?
-  sales     Sales[]
-  managedBranch Branch? @relation("BranchManager")
-  branchId   String?    @db.ObjectId
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  email         String   @unique
+  password      String
+  name          String?
+  phone         String
+  role          Role     @default(CUSTOMER)
+  isVerified    Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  cart          Cart?
+  orders        Order[]
+  managedBranch Branch?  @relation("BranchManager")
+  branchId      String?  @db.ObjectId
 }
 
 enum Role {
@@ -29,67 +29,105 @@ enum Role {
 }
 
 model Branch {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String   @unique
-  location  String
-  address   String?
-  phone     String?
-  manager   User     @relation("BranchManager", fields: [managerId], references: [id])
-  managerId String     @unique @db.ObjectId
-  products  Product[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  name              String   @unique
+  branchName        String?
+  location          String?
+  address           String?
+  city              String?
+  state             String?
+  pincode           String?
+  phone             String?
+  gstNumber         String
+  fssaiLicense      String?
+  bankAccountName   String?
+  bankAccountNumber String?
+  bankIfscCode      String?
+  openTime          String?
+  closeTime         String?
+  storeImageUrl     String?
+  licenseImageUrl   String?
+  fssaiPdfUrl       String?
+  gstPdfUrl         String?
+  bankPassbookPdfUrl String?
+  managerPhotoUrl    String?
+  isVisible         Boolean  @default(false)
+  storeStatus       String   @default("pending") // pending, under_review, verified, rejected
+  manager           User     @relation("BranchManager", fields: [managerId], references: [id])
+  managerId         String   @unique @db.ObjectId
+  products          Product[]
+  orders            Order[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Product {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  price     Float
-  category  String
-  quantity  Int
-  imageUrl  String
-  branchId  String   @db.ObjectId
-  branch    Branch   @relation(fields: [branchId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  price       Float
+  category    String
+  isAvailable Boolean  @default(true)
+  imageUrl    String
+  branchId    String   @db.ObjectId
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([category])
   @@index([branchId])
 }
 
 model Cart {
-  id     String     @id @default(auto()) @map("_id") @db.ObjectId
-  userId String     @unique @db.ObjectId
-  user   User       @relation(fields: [userId], references: [id])
-  items  CartItem[]
-  total  Float      @default(0)
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String     @unique @db.ObjectId
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  orderType OrderType  @default(DINE_IN)
+  total     Float      @default(0)
 }
 
 type CartItem {
-  productId         String @db.ObjectId
-  productName       String
-  price             Float
-  availableQuantity Int
-  selectedQuantity  Int
+  productId   String @db.ObjectId
+  productName String
+  price       Float
+  quantity    Int
 }
 
-model Sales {
-  id         String     @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String     @db.ObjectId
-  user       User       @relation(fields: [userId], references: [id])
-  items      SaleItem[]
+model Order {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String      @db.ObjectId
+  user       User        @relation(fields: [userId], references: [id])
+  branchId   String      @db.ObjectId
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  items      OrderItem[]
   orderTotal Float
-  status     String     @default("PLACED")
-  createdAt  DateTime   @default(now())
+  orderType  OrderType
+  status     OrderStatus @default(RECEIVED)
+  createdAt  DateTime    @default(now())
 
   @@index([createdAt])
   @@index([userId])
+  @@index([branchId])
 }
 
-type SaleItem {
-  productId  String @db.ObjectId
+type OrderItem {
+  productId   String @db.ObjectId
   productName String
-  price      Float
-  quantity   Int
-  totalPrice Float
+  price       Float
+  quantity    Int
+  totalPrice  Float
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+}
+
+enum OrderStatus {
+  RECEIVED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
 }

@@ -74,6 +74,8 @@ export default function ProductInventoryList({
                 <div style={styles.searchWrapper}>
                     <input
                         type="text"
+                        id="inventorySearch"
+                        name="inventorySearch"
                         placeholder="Search items..."
                         value={inventorySearch}
                         onChange={(e) => setInventorySearch(e.target.value)}

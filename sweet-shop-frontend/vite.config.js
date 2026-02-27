@@ -8,5 +8,8 @@ export default defineConfig({
     host: '0.0.0.0', // Listen on all network interfaces
     port: 5173,       // Port number
     strictPort: true, // Exit if port is already in use
+    headers: {
+      'Content-Security-Policy': "script-src 'self' 'unsafe-inline' 'unsafe-eval'; object-src 'self'",
+    },
   }
 })

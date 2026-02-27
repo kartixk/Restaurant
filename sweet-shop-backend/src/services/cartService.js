@@ -4,15 +4,15 @@ const getCart = async (userId) => {
     const cart = await prisma.cart.findUnique({
         where: { userId }
     });
-    return cart || { items: [], total: 0 };
+    return cart || { items: [], total: 0, orderType: "DINE_IN" };
 };
 
 const addOrUpdateItem = async (userId, productId, quantity) => {
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new Error("Product not found");
 
-    if (quantity > product.quantity) {
-        throw new Error("Insufficient stock");
+    if (!product.isAvailable) {
+        throw new Error("Product is currently unavailable");
     }
 
     let cart = await prisma.cart.findUnique({ where: { userId } });
@@ -22,7 +22,8 @@ const addOrUpdateItem = async (userId, productId, quantity) => {
             data: {
                 userId,
                 items: [],
-                total: 0
+                total: 0,
+                orderType: "DINE_IN"
             }
         });
     }
@@ -31,20 +32,18 @@ const addOrUpdateItem = async (userId, productId, quantity) => {
     const index = items.findIndex(i => i.productId === productId);
 
     if (index > -1) {
-        items[index].selectedQuantity = quantity;
-        items[index].availableQuantity = product.quantity;
+        items[index].quantity = quantity;
         items[index].price = product.price;
     } else {
         items.push({
             productId: product.id,
             productName: product.name,
             price: product.price,
-            selectedQuantity: quantity,
-            availableQuantity: product.quantity
+            quantity: quantity,
         });
     }
 
-    const total = items.reduce((sum, i) => sum + i.selectedQuantity * i.price, 0);
+    const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
 
     const updatedCart = await prisma.cart.update({
         where: { id: cart.id },
@@ -66,12 +65,12 @@ const updateItemQuantity = async (userId, productId, quantity) => {
     }
 
     const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (product && product.quantity < quantity) {
-        throw new Error(`Insufficient stock. Max available: ${product.quantity}`);
+    if (product && !product.isAvailable) {
+        throw new Error("Product is currently unavailable");
     }
 
-    items[itemIndex].selectedQuantity = quantity;
-    const total = items.reduce((sum, i) => sum + i.selectedQuantity * i.price, 0);
+    items[itemIndex].quantity = quantity;
+    const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
 
     const updatedCart = await prisma.cart.update({
         where: { id: cart.id },
@@ -86,7 +85,7 @@ const removeItem = async (userId, productId) => {
     if (!cart) throw new Error("Cart not found");
 
     const items = cart.items.filter(i => i.productId !== productId);
-    const total = items.reduce((sum, i) => sum + i.selectedQuantity * i.price, 0);
+    const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
 
     const updatedCart = await prisma.cart.update({
         where: { id: cart.id },
@@ -94,6 +93,16 @@ const removeItem = async (userId, productId) => {
     });
 
     return updatedCart;
+};
+
+const updateOrderType = async (userId, orderType) => {
+    const cart = await prisma.cart.findUnique({ where: { userId } });
+    if (!cart) throw new Error("Cart not found");
+
+    return await prisma.cart.update({
+        where: { id: cart.id },
+        data: { orderType }
+    });
 };
 
 const confirmOrder = async (userId) => {
@@ -105,7 +114,8 @@ const confirmOrder = async (userId) => {
         }
 
         let orderTotal = 0;
-        const saleItems = [];
+        const orderItems = [];
+        let branchId = null;
 
         for (const item of cart.items) {
             const product = await tx.product.findUnique({ where: { id: item.productId } });
@@ -114,35 +124,34 @@ const confirmOrder = async (userId) => {
                 throw new Error(`${item.productName} not found`);
             }
 
-            if (product.quantity < item.selectedQuantity) {
-                throw new Error(`Insufficient stock for ${item.productName}`);
+            if (!product.isAvailable) {
+                throw new Error(`${item.productName} is currently unavailable`);
             }
 
-            // Reduce stock
-            await tx.product.update({
-                where: { id: product.id },
-                data: { quantity: { decrement: item.selectedQuantity } }
-            });
+            // In a QSR, assume the cart belongs to a single branch. We take the branch from the first item.
+            if (!branchId) branchId = product.branchId;
 
-            const totalPrice = item.price * item.selectedQuantity;
+            const totalPrice = item.price * item.quantity;
             orderTotal += totalPrice;
 
-            saleItems.push({
+            orderItems.push({
                 productId: product.id,
                 productName: item.productName,
                 price: item.price,
-                quantity: item.selectedQuantity,
+                quantity: item.quantity,
                 totalPrice
             });
         }
 
-        // Save sale
-        await tx.sales.create({
+        // Save order
+        const order = await tx.order.create({
             data: {
                 userId,
-                items: saleItems,
+                branchId,
+                items: orderItems,
                 orderTotal,
-                status: "PLACED"
+                orderType: cart.orderType || "DINE_IN",
+                status: "RECEIVED"
             }
         });
 
@@ -152,29 +161,25 @@ const confirmOrder = async (userId) => {
             data: { items: [], total: 0 }
         });
 
-        return { message: "Order confirmed successfully 🎉" };
+        return { message: "Order placed successfully 🎉", orderId: order.id };
     });
 };
 
-const buyNow = async (userId, productId, quantity) => {
+const buyNow = async (userId, productId, quantity, orderType = "TAKEAWAY") => {
     return await prisma.$transaction(async (tx) => {
         const product = await tx.product.findUnique({ where: { id: productId } });
         if (!product) throw new Error("Product not found");
 
-        if (product.quantity < quantity) {
-            throw new Error("Insufficient stock");
+        if (!product.isAvailable) {
+            throw new Error("Product is currently unavailable");
         }
-
-        await tx.product.update({
-            where: { id: productId },
-            data: { quantity: { decrement: quantity } }
-        });
 
         const totalPrice = product.price * quantity;
 
-        await tx.sales.create({
+        const order = await tx.order.create({
             data: {
                 userId,
+                branchId: product.branchId,
                 items: [{
                     productId: product.id,
                     productName: product.name,
@@ -183,11 +188,12 @@ const buyNow = async (userId, productId, quantity) => {
                     totalPrice
                 }],
                 orderTotal: totalPrice,
-                status: "PLACED"
+                orderType: orderType,
+                status: "RECEIVED"
             }
         });
 
-        return { message: "Order placed successfully 🎉" };
+        return { message: "Order placed successfully 🎉", orderId: order.id };
     });
 };
 
@@ -197,5 +203,6 @@ module.exports = {
     updateItemQuantity,
     removeItem,
     confirmOrder,
-    buyNow
+    buyNow,
+    updateOrderType
 };

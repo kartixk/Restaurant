@@ -1,7 +1,7 @@
 const express = require("express");
 const { authMiddleware } = require("../middleware/auth");
 const { validate } = require("../middleware/validate");
-const { cartItemSchema, buyNowSchema, updateQuantitySchema } = require("../validators/cartValidator");
+const { cartItemSchema, buyNowSchema, updateQuantitySchema, orderTypeSchema } = require("../validators/cartValidator");
 const cartController = require("../controllers/cartController");
 
 const router = express.Router();
@@ -16,7 +16,7 @@ router.post(
 );
 
 router.put(
-  "/items/:sweetId",
+  "/items/:sweetId", // keeping path param sweetId for backwards compatibility but logic uses both
   authMiddleware,
   validate(updateQuantitySchema),
   cartController.updateItemQuantity
@@ -25,6 +25,13 @@ router.put(
 router.delete("/items/:sweetId", authMiddleware, cartController.removeItem);
 
 router.post("/confirm", authMiddleware, cartController.confirmOrder);
+
+router.put(
+  "/order-type",
+  authMiddleware,
+  // validate(orderTypeSchema),  // Assuming will add it
+  cartController.updateOrderType
+);
 
 router.post(
   "/buy-now",

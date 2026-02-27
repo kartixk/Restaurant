@@ -1,103 +1,65 @@
-import React from "react";
-import { motion } from "framer-motion";
-import { cartStyles as styles } from "./CartStyles";
-import { useRemoveCartItem, useUpdateCartItem } from "../../../hooks/useCart";
-import { toast } from "react-toastify";
+// src/components/features/cart/CartItem.jsx
+import React from 'react';
+import { motion } from 'framer-motion';
+import { useRemoveFromCart } from '../../../hooks/useCart';
+import { cartStyles as styles } from './CartStyles';
+import { toast } from 'react-toastify';
 
 export default function CartItem({ item }) {
-    const removeMutation = useRemoveCartItem();
-    const updateMutation = useUpdateCartItem();
+    const removeMutation = useRemoveFromCart();
 
-    const removeItem = (productId, productName) => {
-        const loadingToast = toast.loading("Removing item...");
-        removeMutation.mutate(productId, {
-            onSuccess: () => {
-                toast.dismiss(loadingToast);
-                toast.success(`${productName} removed from cart`);
-            },
-            onError: (err) => {
-                console.error(err);
-                toast.dismiss(loadingToast);
-                toast.error("Failed to remove item.");
-            }
-        });
-    };
-
-    const updateQuantity = (productId, currentQty, change, maxStock) => {
-        const newQty = currentQty + change;
-        if (newQty < 1) {
-            toast.warning("Quantity cannot be less than 1");
-            return;
-        }
-        if (change > 0 && maxStock && newQty > maxStock) {
-            toast.error(`Only ${maxStock} items available in stock!`);
-            return;
-        }
-
-        updateMutation.mutate({ sweetId: productId, quantity: newQty }, {
-            onError: (err) => {
-                console.error(err);
-                toast.error(err.response?.data?.message || "Failed to update quantity");
-            }
+    const handleRemove = () => {
+        removeMutation.mutate(item.productId || item.sweet || item._id, {
+            onSuccess: () => toast.success(`${item.productName} removed from cart`),
+            onError: () => toast.error("Failed to remove item")
         });
     };
 
     return (
         <motion.div
             style={styles.cartItem}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            layout
         >
+            <img
+                src={item.imageUrl || "https://placehold.co/100x100?text=No+Image"}
+                alt={item.productName}
+                style={styles.itemImage}
+                onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=Food"; }}
+            />
+
             <div style={styles.itemInfo}>
-                <h3 style={styles.itemName}>{item.productName || item.sweetName}</h3>
-                <div style={styles.itemDetails}>
-                    <div style={styles.detailRow}>
-                        <span style={styles.detailLabel}>Price:</span>
-                        <span style={styles.detailValue}>₹{item.price}</span>
-                    </div>
+                <h4 style={styles.itemName}>{item.productName}</h4>
+                <span style={styles.itemPrice}>₹{item.price}</span>
 
-                    <div style={styles.detailRow}>
-                        <span style={styles.detailLabel}>Quantity:</span>
-                        <div style={styles.qtyContainer}>
-                            <button
-                                style={styles.qtyBtn}
-                                onClick={() => updateQuantity(item.productId || item.sweet || item._id, item.selectedQuantity, -1, item.availableQuantity)}
-                            >-</button>
-                            <span style={styles.qtyValue}>{item.selectedQuantity}</span>
-                            <button
-                                style={styles.qtyBtn}
-                                onClick={() => updateQuantity(item.productId || item.sweet || item._id, item.selectedQuantity, 1, item.availableQuantity)}
-                            >+</button>
-                        </div>
-                    </div>
-
-                    <div style={styles.detailRow}>
-                        <span style={styles.detailLabel}>Available:</span>
-                        <span style={{
-                            ...styles.detailValue,
-                            color: (item.availableQuantity || 0) > 0 ? '#28a745' : '#dc3545'
-                        }}>
-                            {item.availableQuantity || 0}
-                        </span>
-                    </div>
-                </div>
-
-                {(item.availableQuantity || 0) < item.selectedQuantity && (
-                    <div style={styles.stockWarning}>
-                        Only {item.availableQuantity || 0} units available
-                    </div>
-                )}
-
-                <div style={styles.itemTotal}>
-                    Subtotal: <span style={styles.itemTotalAmount}>₹{item.price * item.selectedQuantity}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 600 }}>Qty:</span>
+                    <span style={{
+                        background: '#F1F5F9',
+                        padding: '4px 12px',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        fontWeight: 800,
+                        color: '#0F172A'
+                    }}>
+                        {item.quantity || item.selectedQuantity}
+                    </span>
                 </div>
             </div>
 
             <motion.button
-                onClick={() => removeItem(item.productId || item.sweet || item._id, item.productName || item.sweetName)}
-                style={styles.removeButton}
-                whileHover={{ scale: 1.05, backgroundColor: "#d32f2f" }}
-                whileTap={{ scale: 0.95 }}
+                style={styles.removeBtn}
+                onClick={handleRemove}
+                whileHover={{ scale: 1.1, backgroundColor: '#FEE2E2' }}
+                whileTap={{ scale: 0.9 }}
+                title="Remove Item"
             >
-                Remove
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
             </motion.button>
         </motion.div>
     );
