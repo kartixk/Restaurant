@@ -29,18 +29,20 @@ const authLimiter = rateLimit({
 });
 
 // Use morgan to log HTTP requests via our winston logger
-const morganFormat = isDev ? "dev" : "combined";
-app.use(
-    morgan(morganFormat, {
-        stream: {
-            write: (message) => logger.info(message.trim()),
-        },
-    })
-);
+// const morganFormat = isDev ? "dev" : "combined";
+// app.use(
+//     morgan(morganFormat, {
+//         stream: {
+//             write: (message) => logger.info(message.trim()),
+//         },
+//     })
+// );
 
+const path = require('path');
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use('/api', limiter);
 
 app.use("/api/cart", require("./routes/cart"));

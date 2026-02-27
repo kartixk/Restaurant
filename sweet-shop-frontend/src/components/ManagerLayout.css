@@ -1,0 +1,395 @@
+/* ManagerLayout.css */
+.manager-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-family: 'Inter', sans-serif;
+}
+
+.manager-sidebar {
+    width: 260px;
+    background-color: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.manager-layout.sidebar-collapsed .manager-sidebar {
+    width: 80px;
+}
+
+.manager-sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.manager-logo-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.3);
+}
+
+.manager-sidebar-nav {
+    padding: 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.manager-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.manager-layout.sidebar-collapsed .manager-nav-item {
+    justify-content: center;
+    padding: 0.75rem;
+}
+
+.manager-nav-item.active {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.manager-nav-item.inactive {
+    background-color: transparent;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.manager-sidebar-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.manager-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    color: #ef4444;
+    cursor: pointer;
+    font-weight: 500;
+    border: none;
+    background: none;
+    width: 100%;
+}
+
+.manager-main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.manager-topbar {
+    height: 70px;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.manager-content {
+    padding: 2rem;
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.manager-page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.5px;
+}
+
+.manager-page-subtitle {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.manager-badge {
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.manager-badge-success {
+    background-color: #ecfdf5;
+    color: #059669;
+}
+
+.manager-badge-warning {
+    background-color: #fffbeb;
+    color: #b45309;
+}
+
+.manager-badge-error {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+/* User Profile Styles */
+.manager-user-profile-wrap {
+    position: relative;
+    z-index: 1000;
+}
+
+.manager-profile-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.manager-profile-toggle:hover,
+.manager-profile-toggle.active {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+}
+
+.manager-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #64748b 0%, #334155 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.manager-profile-name-sm {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.manager-user-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.75rem);
+    right: 0;
+    width: 260px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.manager-dropdown-header {
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: linear-gradient(to bottom, #f8fafc, #ffffff);
+}
+
+.manager-avatar-lg {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #FF5A00 0%, #ea580c 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.25rem;
+    box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.2);
+}
+
+.manager-user-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.manager-user-name {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.manager-user-email {
+    font-size: 0.75rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.manager-dropdown-divider {
+    height: 1px;
+    background-color: #f1f5f9;
+}
+
+.manager-dropdown-item {
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.manager-item-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.manager-item-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.manager-dropdown-logout {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: none;
+    background: transparent;
+    color: #ef4444;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: left;
+}
+
+.manager-dropdown-logout:hover {
+    background-color: #fff1f2;
+}
+
+/* Sidebar Collapse Button */
+.manager-collapse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 10px;
+    border: none;
+    background-color: #f8fafc;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.manager-collapse-btn:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.manager-layout.sidebar-collapsed .manager-collapse-btn {
+    padding: 0.75rem;
+}
+
+/* Sidebar User Info Block */
+.manager-sidebar-user-info {
+    padding: 12px;
+    background-color: #f8fafc;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border: 1px solid #f1f5f9;
+}
+
+.manager-sidebar-user-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.manager-sidebar-user-email {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.manager-sidebar-role-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background-color: #0f172a;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}

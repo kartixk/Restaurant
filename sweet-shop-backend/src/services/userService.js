@@ -38,7 +38,7 @@ const loginUser = async (data) => {
         throw new Error("Invalid credentials");
     }
 
-    if (!user.isVerified) {
+    if (!user.isVerified && user.role !== "MANAGER") {
         throw new Error("Account pending admin approval");
     }
 
@@ -52,7 +52,16 @@ const loginUser = async (data) => {
     return { user, token };
 };
 
+const updateProfile = async (userId, data) => {
+    const { name, phone } = data;
+    return await prisma.user.update({
+        where: { id: userId },
+        data: { name, phone }
+    });
+};
+
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    updateProfile
 };

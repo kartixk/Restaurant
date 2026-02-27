@@ -11,7 +11,20 @@ const getPendingManagers = async () => {
             id: true,
             email: true,
             name: true,
-            createdAt: true
+            phone: true,
+            createdAt: true,
+            managedBranch: {
+                select: {
+                    name: true,
+                    branchName: true,
+                    fssaiPdfUrl: true,
+                    gstPdfUrl: true,
+                    bankPassbookPdfUrl: true,
+                    managerPhotoUrl: true,
+                    fssaiLicense: true,
+                    gstNumber: true
+                }
+            }
         }
     });
 };

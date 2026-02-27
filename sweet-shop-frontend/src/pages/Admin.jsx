@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 import api from "../api/axios";
 import { useProducts, useAddProduct, useDeleteProduct, useUpdateProductStock } from "../hooks/useProducts";
 import { useBranches } from "../hooks/useBranches";
@@ -14,6 +14,7 @@ import {
 
 import AddProductForm from "../components/features/admin/AddProductForm";
 import ProductInventoryList from "../components/features/admin/ProductInventoryList";
+import BranchSettingsModal from "../components/features/admin/BranchSettingsModal";
 
 // ─── FORMATTERS ─────────────────────────────────────────────────────────────
 const formatCurrency = (value) => {
@@ -71,11 +72,16 @@ function StatusBadge({ status }) {
   );
 }
 
+
 // ─── MAIN ADMIN COMPONENT ───────────────────────────────────────────────────
 export default function Admin() {
   const { role: upperRole, isAuthenticated, user, logout } = useAuthStore();
   const role = upperRole ? upperRole.toUpperCase() : null;
   const navigate = useNavigate();
+
+  if (role === "MANAGER") {
+    return <Navigate to="/manager" replace />;
+  }
 
   const handleLogout = () => {
     logout();
@@ -88,12 +94,25 @@ export default function Admin() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [pendingManagers, setPendingManagers] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("adminDarkMode") === "true");
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const S = useMemo(() => getStyles(isDarkMode), [isDarkMode]);
 
+  // Close notification dropdown when clicking outside
+  const notificationsRef = useRef(null);
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Global Data
-  const { data: dbBranches = [] } = useBranches();
+  const { data: dbBranches = [], refetch: refetchBranches } = useBranches();
+  const pendingStores = useMemo(() => dbBranches.filter(b => b.storeStatus === "under_review"), [dbBranches]);
   const { data: products = [], error: productsError } = useProducts(selectedBranchId);
 
   // Forms & State
@@ -118,28 +137,30 @@ export default function Admin() {
     if (!isAuthenticated || (role !== "ADMIN" && role !== "MANAGER")) {
       toast.error("Access Denied.");
       navigate("/login");
+    } else if (role === "MANAGER") {
+      navigate("/manager");
     } else {
       fetchReport("month"); // default to month for dashboard charts
-      if (role === "ADMIN") fetchPendingManagers();
     }
   }, [isAuthenticated, role, navigate, selectedBranchId, activeSidebarItem]);
 
-  const fetchPendingManagers = async () => {
+  const handleApproveStore = async (branchId) => {
     try {
-      const res = await api.get("/admin/managers/pending");
-      setPendingManagers(res.data.managers || []);
+      await api.put(`/branches/${branchId}/verify`, { status: "verified" });
+      toast.success("Store Approved! Verification email sent to manager.");
+      if (refetchBranches) refetchBranches();
     } catch (err) {
-      console.error("Failed to fetch pending managers", err);
+      handleApiError(err, "Failed to approve store");
     }
   };
 
-  const handleApproveManager = async (managerId) => {
+  const handleRejectStore = async (branchId) => {
     try {
-      await api.put(`/admin/managers/${managerId}/approve`);
-      toast.success("Manager approved!");
-      fetchPendingManagers(); // refresh list
+      await api.put(`/branches/${branchId}/verify`, { status: "rejected" });
+      toast.success("Store rejected. Notification email sent to manager.");
+      if (refetchBranches) refetchBranches();
     } catch (err) {
-      handleApiError(err, "Failed to approve manager");
+      handleApiError(err, "Failed to reject store");
     }
   };
 
@@ -163,13 +184,20 @@ export default function Admin() {
     } finally { setReportLoading(false); }
   };
 
-  // Map real branches from DB
-  const displayBranches = dbBranches.map(b => ({
-    id: b.id, name: b.name, location: b.location,
-    managerName: b.manager?.name, managerEmail: b.manager?.email, managerPhone: b.manager?.phone || "+91 9999999999",
-    status: b.managerId ? 'active' : 'inactive',
-    revenue: 0 // Would ideally come from stats API per branch
-  }));
+  // Map real branches from DB with real revenue
+  const displayBranches = dbBranches.map(b => {
+    // Sum revenue for this branch from salesList using orderTotal
+    const branchRevenue = salesList
+      .filter(s => s.branchId === b.id)
+      .reduce((sum, s) => sum + (Number(s.orderTotal) || 0), 0);
+
+    return {
+      id: b.id, name: b.name, location: b.location,
+      managerName: b.manager?.name, managerEmail: b.manager?.email, managerPhone: b.manager?.phone || "+91 9999999999",
+      status: b.storeStatus?.toLowerCase() === 'verified' ? 'active' : 'inactive',
+      revenue: branchRevenue
+    };
+  });
 
   const activeBranchesCount = displayBranches.filter(b => b.status === 'active').length;
 
@@ -180,7 +208,7 @@ export default function Admin() {
     const grouped = {};
     salesList.forEach(s => {
       const d = new Date(s.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-      grouped[d] = (grouped[d] || 0) + s.totalAmount;
+      grouped[d] = (grouped[d] || 0) + (Number(s.orderTotal) || 0);
     });
     return Object.keys(grouped).slice(-30).map(k => ({ date: k, revenue: grouped[k] }));
   }, [salesList]);
@@ -243,16 +271,18 @@ export default function Admin() {
       <div style={S.chartGrid}>
         <div style={{ ...S.card, gridColumn: "span 2" }}>
           <div style={S.cardHeader}><h2 style={S.cardTitle}>Revenue Last 30 Days</h2></div>
-          <div style={{ height: 300, padding: "1.5rem" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: S.pageSubtitle.color, fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: S.pageSubtitle.color, fontSize: 12 }} tickFormatter={(v) => `₹${v / 1000}k`} dx={-10} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => formatCurrency(value)} />
-                <Line type="monotone" dataKey="revenue" stroke={S.pageTitle.color} strokeWidth={3} dot={false} activeDot={{ r: 6, fill: S.pageTitle.color, stroke: isDarkMode ? '#1e293b' : '#fff', strokeWidth: 2 }} />
-              </LineChart>
-            </ResponsiveContainer>
+          <div style={{ padding: "0 1.5rem 1.5rem 1.5rem" }}>
+            <div style={{ height: 300, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <LineChart data={revenueChartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: S.pageSubtitle.color, fontSize: 12 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: S.pageSubtitle.color, fontSize: 12 }} tickFormatter={(v) => `₹${v / 1000}k`} dx={-10} />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => formatCurrency(value)} />
+                  <Line type="monotone" dataKey="revenue" stroke={S.pageTitle.color} strokeWidth={3} dot={false} activeDot={{ r: 6, fill: S.pageTitle.color, stroke: isDarkMode ? '#1e293b' : '#fff', strokeWidth: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -263,20 +293,24 @@ export default function Admin() {
               <div style={S.emptyState}>No branches to rank</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {displayBranches.slice(0, 5).map((b, i) => (
-                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: i === 0 ? '#fef3c7' : '#f1f5f9', color: i === 0 ? '#b45309' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {i + 1}
+                {displayBranches
+                  .filter(b => b.status === 'active')
+                  .sort((a, b) => b.revenue - a.revenue)
+                  .slice(0, 5)
+                  .map((b, i) => (
+                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: i === 0 ? '#fef3c7' : '#f1f5f9', color: i === 0 ? '#b45309' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {i + 1}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 500, color: S.pageTitle.color, fontSize: '0.875rem' }}>{b.name}</div>
+                          <div style={{ color: S.pageSubtitle.color, fontSize: '0.75rem' }}>{b.location}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 500, color: S.pageTitle.color, fontSize: '0.875rem' }}>{b.name}</div>
-                        <div style={{ color: S.pageSubtitle.color, fontSize: '0.75rem' }}>{b.location}</div>
-                      </div>
+                      <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: '0.875rem' }}>{formatCurrency(b.revenue)}</div>
                     </div>
-                    <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: '0.875rem' }}>{formatCurrency(b.revenue)}</div>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
@@ -285,163 +319,201 @@ export default function Admin() {
     </div>
   );
 
-  const renderBranchesList = () => (
-    <div style={S.mainContent}>
-      <div style={S.headerRow}>
-        <div>
-          <h1 style={S.pageTitle}>Restaurants</h1>
-          <p style={S.pageSubtitle}>Manage your individual restaurant locations and access their details.</p>
-        </div>
-      </div>
+  // ─── 1. RESTAURANT FLEET DASHBOARD (List View) ─────────────────────────────
+  const renderBranchesList = () => {
+    // Role-Based Filtering: Admins see all, Managers see only their assigned branches
+    // Additionally filter to only show 'active' (verified) branches in the main list
+    const authorizedBranches = (role === "ADMIN"
+      ? displayBranches
+      : displayBranches.filter(b => b.managerEmail === user?.email)
+    ).filter(b => b.status === 'active');
 
-      <div style={S.card}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>Branch Details</th>
-                <th style={S.th}>Assigned Manager</th>
-                <th style={S.th}>Status</th>
-                <th style={S.th}>MTD Revenue</th>
-                <th style={{ ...S.th, textAlign: "right" }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayBranches.length === 0 ? (
-                <tr>
-                  <td colSpan="5">
-                    <div style={S.emptyState}>
-                      <Icons.Branches />
-                      <span>No branches found.</span>
+    return (
+      <div style={S.mainContent}>
+        <div style={S.headerRow}>
+          <div>
+            <h1 style={S.pageTitle}>{role === "ADMIN" ? "Restaurant Fleet" : "My Restaurant"}</h1>
+            <p style={S.pageSubtitle}>
+              {role === "ADMIN" ? "Monitor live status and revenue across all locations." : "Manage your specific location's performance and menu."}
+            </p>
+          </div>
+          {/* The "+ Onboard New Store" button has been completely removed as requested */}
+        </div>
+
+        {authorizedBranches.length === 0 ? (
+          <div style={S.emptyState}>
+            <Icons.Branches />
+            <h3>No Restaurants Assigned</h3>
+            <p>You currently do not have any active stores under your control.</p>
+          </div>
+        ) : (
+          <div style={S.storeGrid}>
+            {authorizedBranches.map(branch => (
+              <motion.div
+                key={branch.id}
+                style={S.storeCard}
+                whileHover={{ y: -4, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
+                transition={{ duration: 0.2 }}
+              >
+                <div style={S.storeCardHeader}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={S.storeIcon}>🍔</div>
+                    <div>
+                      <h3 style={S.storeName}>{branch.name}</h3>
+                      <p style={S.storeLocation}>{branch.location}</p>
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                displayBranches.map(branch => (
-                  <motion.tr key={branch.id} style={S.tr} whileHover={{ backgroundColor: S.layout.backgroundColor }} onClick={() => setSelectedBranchId(branch.id)}>
-                    <td style={S.td}>
-                      <div style={{ fontWeight: 600, color: S.pageTitle.color }}>{branch.name}</div>
-                      <div style={{ fontSize: "0.8rem", color: S.pageSubtitle.color }}>{branch.location}</div>
-                    </td>
-                    <td style={S.td}>
-                      {branch.managerName ? (
-                        <div>
-                          <div style={{ color: S.pageTitle.color, fontSize: "0.875rem", fontWeight: 500 }}>{branch.managerName}</div>
-                          <div style={{ color: S.pageSubtitle.color, fontSize: "0.75rem" }}>{branch.managerEmail}</div>
-                        </div>
-                      ) : (
-                        <span style={{ color: S.pageSubtitle.color, fontSize: "0.875rem" }}>Unassigned</span>
-                      )}
-                    </td>
-                    <td style={S.td}><StatusBadge status={branch.status} /></td>
-                    <td style={S.td}><span style={{ color: S.pageTitle.color, fontSize: "0.875rem", fontWeight: 500 }}>{formatCurrency(branch.revenue)}</span></td>
-                    <td style={{ ...S.td, textAlign: "right" }}>
-                      <button onClick={(e) => { e.stopPropagation(); setSelectedBranchId(branch.id); }} style={S.actionBtn}>View Details</button>
-                    </td>
-                  </motion.tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+                  </div>
+                  <div style={branch.status === 'active' ? S.statusBadgeLive : S.statusBadgeOffline}>
+                    <span style={S.statusDot}></span>
+                    {branch.status === 'active' ? 'Accepting Orders' : 'Offline'}
+                  </div>
+                </div>
 
+                <div style={S.storeMetrics}>
+                  <div style={S.metricBox}>
+                    <span style={S.metricLabel}>Today's Rev</span>
+                    <span style={S.metricValue}>{formatCurrency(branch.revenue || 0)}</span>
+                  </div>
+                  <div style={S.metricBox}>
+                    <span style={S.metricLabel}>Manager</span>
+                    <span style={{ ...S.metricValue, fontSize: '0.9rem', color: '#475569' }}>
+                      {branch.managerName ? branch.managerName.split(' ')[0] : 'Unassigned'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={S.storeActions}>
+                  <button
+                    onClick={() => setSelectedBranchId(branch.id)}
+                    style={S.actionBtnBlue}
+                  >
+                    Enter Command Center →
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ─── 2. STORE COMMAND CENTER (Detail View) ─────────────────────────────────
   const renderBranchDetail = () => {
     const branch = displayBranches.find(b => b.id === selectedBranchId);
     if (!branch) return null;
 
     return (
       <div style={S.mainContent}>
-        <button onClick={() => setSelectedBranchId("")} style={S.linkBtn}>← Back to all branches</button>
+        <button onClick={() => setSelectedBranchId("")} style={S.linkBtn}>← Back to Fleet Dashboard</button>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '1.5rem', marginBottom: '2rem' }}>
+        <div style={S.commandHeader}>
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '12px', backgroundColor: isDarkMode ? "#334155" : "#e2e8f0", display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', border: '1px solid #cbd5e1' }}>
-              🏢
-            </div>
+            <div style={S.commandIcon}>🏢</div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '4px' }}>
                 <h1 style={S.pageTitle}>{branch.name}</h1>
-                <StatusBadge status={branch.status} />
+                <div style={branch.status === 'active' ? S.statusBadgeLive : S.statusBadgeOffline}>
+                  <span style={S.statusDot}></span>
+                  {branch.status === 'active' ? 'Live' : 'Offline'}
+                </div>
               </div>
-              <p style={{ ...S.pageSubtitle, display: 'flex', gap: '1rem' }}>
+              <p style={{ ...S.pageSubtitle, display: 'flex', gap: '1.5rem' }}>
                 <span>📍 {branch.location}</span>
-                <span>📋 MGR: {branch.managerName || 'None'}</span>
+                <span>📋 MGR: {branch.managerName || 'Pending Assignment'}</span>
               </p>
             </div>
           </div>
-          <button style={S.secondaryBtn}>Edit Settings</button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+                backgroundColor: '#FFFFFF',
+                color: '#0F172A',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)'
+              }}
+              onClick={() => setIsSettingsModalOpen(true)}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+            >
+              <Icons.Settings />
+              Store Settings
+            </button>
+          </div>
         </div>
 
         <div style={S.tabs}>
-          {[["overview", "Financial Overview"], ["inventory", "Menu & Inventory"], ["add", "Add Item"]].map(([key, label]) => (
+          {[["overview", "Live Performance"]].map(([key, label]) => (
             <button key={key} onClick={() => setActiveBranchTab(key)} style={{ ...S.tabBtn, ...(activeBranchTab === key ? S.tabBtnActive : {}) }}>{label}</button>
           ))}
         </div>
 
         {activeBranchTab === "overview" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-              <div style={{ ...S.card, padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: S.pageSubtitle.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Branch Manager</h3>
-                {branch.managerName ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: S.sidebarNavItemActive.backgroundColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.pageTitle.color }}>
-                        <Icons.Users />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 600, color: S.pageTitle.color }}>{branch.managerName}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981' }}></span> Active Account</div>
-                      </div>
-                    </div>
-                    <div style={{ height: '1px', backgroundColor: isDarkMode ? "#334155" : "#e2e8f0" }}></div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem', color: S.pageSubtitle.color }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Icons.Mail /> {branch.managerEmail}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Icons.Phone /> {branch.managerPhone}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={S.emptyState}>No manager assigned</div>
-                )}
-              </div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+            {/* Real-time KPIs */}
+            <div style={S.statsGrid}>
+              <StatCard styles={S} label="Revenue (MTD)" value={formatCurrency(reportSummary.totalAmount)} trend="+12.4%" isPositive={true} />
+              <StatCard styles={S} label="Total Orders" value={reportSummary.count} trend="Stable" isPositive={true} />
+              <StatCard styles={S} label="Avg. Ticket Size" value={formatCurrency(reportSummary.totalAmount / (reportSummary.count || 1))} />
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <StatCard styles={S} label="Total Revenue (All Time)" value={formatCurrency(reportSummary.totalAmount)} trend="+12.4% vs last month" isPositive={true} />
-                <StatCard styles={S} label="Today's Revenue" value={formatCurrency(reportSummary.totalAmount * 0.05)} trend="-2.1% vs yesterday" isPositive={false} />
-                <StatCard styles={S} label="Total Orders" value={reportSummary.count} trend="Average 42/day" isPositive={true} />
-                <StatCard styles={S} label="AOV (Avg Order Val)" value={formatCurrency(reportSummary.totalAmount / (reportSummary.count || 1))} isPositive={true} />
+            {/* Manager Details Card */}
+            <div style={{ ...S.card, padding: '1.5rem', marginBottom: '2rem' }}>
+              <h3 style={S.cardTitle}>Assigned Leadership</h3>
+              <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {branch.managerName ? (
+                  <>
+                    <div style={S.avatarBtnLg}><Icons.User /></div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '1.1rem' }}>{branch.managerName}</div>
+                      <div style={{ color: '#64748B', fontSize: '0.9rem', display: 'flex', gap: '1rem', marginTop: '4px' }}>
+                        <span>✉️ {branch.managerEmail}</span>
+                        <span>📞 {branch.managerPhone}</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p style={{ color: '#64748B' }}>No manager currently assigned to this location.</p>
+                )}
               </div>
             </div>
 
+            {/* Charts Area */}
             <div style={S.chartGrid}>
               <div style={{ ...S.card, gridColumn: "span 2" }}>
-                <div style={S.cardHeader}><h2 style={S.cardTitle}>Daily Order Volume</h2></div>
+                <div style={S.cardHeader}><h2 style={S.cardTitle}>30-Day Order Volume</h2></div>
                 <div style={{ height: 300, padding: "1.5rem" }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={revenueChartData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: S.pageSubtitle.color, fontSize: 12 }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: S.pageSubtitle.color, fontSize: 12 }} dx={-10} />
-                      <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                      <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} dx={-10} />
+                      <Tooltip cursor={{ fill: '#F8FAFC' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }} />
+                      <Bar dataKey="revenue" fill="#FF5A00" radius={[6, 6, 0, 0]} maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               <div style={S.card}>
-                <div style={S.cardHeader}><h2 style={S.cardTitle}>Revenue Breakdown</h2></div>
+                <div style={S.cardHeader}><h2 style={S.cardTitle}>Dine-in vs Takeaway</h2></div>
                 <div style={{ height: 300, padding: "1rem" }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
-                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={4} dataKey="value">
+                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={index === 0 ? '#0F172A' : '#FF5A00'} />)}
                       </Pie>
-                      <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(val) => `${val}%`} />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: '0.875rem', color: S.pageSubtitle.color }} />
+                      <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }} formatter={(val) => `${val}%`} />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '0.875rem', color: '#64748B', marginTop: '10px' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -450,14 +522,18 @@ export default function Admin() {
           </motion.div>
         )}
 
-        {activeBranchTab === "inventory" && <ProductInventoryList categories={categories} inventoryCategory={inventoryCategory} setInventoryCategory={setInventoryCategory} inventorySearch={inventorySearch} setInventorySearch={setInventorySearch} filteredInventory={filteredInventory} stockInputs={stockInputs} handleStockInputChange={handleStockInputChange} adjustStock={adjustStock} saveStockUpdate={saveStockUpdate} handleDeleteProduct={handleDeleteProduct} />}
-        {activeBranchTab === "add" && <AddProductForm handleAddProduct={handleAddProduct} newProduct={{ ...newProduct, branchId: selectedBranchId }} handleChange={handleChange} categories={categories} branches={dbBranches} role={role} />}
+        <BranchSettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          branch={dbBranches.find(b => b.id === selectedBranchId)}
+        />
       </div>
     );
   };
 
-  // ─── ANALYTICS COMPONENT ───────────────────────────────────────────────────
+  // ─── 3. FINANCIAL ANALYTICS & P&L (Reports View) ───────────────────────────
   const renderAnalytics = () => {
+    // 1. Process Sales Data for Item Rankings
     const productSalesMap = {};
     salesList.forEach(sale => {
       sale.items.forEach(item => {
@@ -471,35 +547,136 @@ export default function Admin() {
 
     const topSellingProducts = Object.values(productSalesMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
 
+    // 2. Calculate P&L Financials (Standard QSR Model)
+    // Assuming reportSummary.totalAmount is the base Net Sales
+    const netSales = reportSummary.totalAmount || 0;
+
+    // QSR standard GST in India is 5%
+    const gstCollected = netSales * 0.05;
+    const grossRevenue = netSales + gstCollected;
+
+    // Standard QSR Cost Estimates
+    const estimatedCogs = netSales * 0.35; // 35% Food Cost
+    const operatingExpenses = netSales * 0.25; // 25% Labor, Rent, Utilities
+
+    const netProfit = netSales - estimatedCogs - operatingExpenses;
+    const profitMargin = netSales > 0 ? ((netProfit / netSales) * 100).toFixed(1) : 0;
+
+    // Data for P&L Donut Chart
+    const pnlChartData = [
+      { name: 'Food Cost', value: estimatedCogs, fill: '#EF4444' },     // Red
+      { name: 'OpEx', value: operatingExpenses, fill: '#F59E0B' },       // Amber
+      { name: 'Net Profit', value: netProfit > 0 ? netProfit : 0, fill: '#10B981' } // Green
+    ];
+
     return (
       <div style={S.mainContent}>
         <div style={S.headerRow}>
           <div>
-            <h1 style={S.pageTitle}>Analytics & Reports</h1>
-            <p style={S.pageSubtitle}>Deep dive into your business performance and insights.</p>
+            <h1 style={S.pageTitle}>Financial Reports</h1>
+            <p style={S.pageSubtitle}>Profit & Loss, Tax liabilities, and item performance.</p>
+          </div>
+          <button style={S.downloadButton} onClick={() => toast.success("Exporting P&L Statement...")}>
+            📥 Export Tax Report (CSV)
+          </button>
+        </div>
+
+        {/* TOP LEVEL KPIs */}
+        <div style={S.statsGrid}>
+          <div style={S.statCard}>
+            <div style={S.statHeader}><span style={S.statLabel}>Gross Revenue (Incl GST)</span></div>
+            <div style={S.statValue}>{formatCurrency(grossRevenue)}</div>
+          </div>
+          <div style={S.statCard}>
+            <div style={S.statHeader}>
+              <span style={S.statLabel}>GST Liability (5%)</span>
+              <span style={{ fontSize: '0.7rem', background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, color: '#64748B' }}>TAX</span>
+            </div>
+            <div style={{ ...S.statValue, color: '#64748B' }}>{formatCurrency(gstCollected)}</div>
+          </div>
+          <div style={S.statCard}>
+            <div style={S.statHeader}><span style={S.statLabel}>Net Sales</span></div>
+            <div style={S.statValue}>{formatCurrency(netSales)}</div>
+          </div>
+          <div style={{ ...S.statCard, border: '1px solid #10B981', background: '#F0FDF4', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.1)' }}>
+            <div style={S.statHeader}><span style={{ ...S.statLabel, color: '#16A34A' }}>Est. Net Profit</span></div>
+            <div style={{ ...S.statValue, color: '#16A34A' }}>{formatCurrency(netProfit)}</div>
+            <div style={{ fontSize: '0.85rem', color: '#16A34A', fontWeight: 800, marginTop: '4px' }}>{profitMargin}% Margin</div>
           </div>
         </div>
 
         <div style={S.chartGrid}>
+
+          {/* PROFIT & LOSS BREAKDOWN */}
+          <div style={{ ...S.card, gridColumn: "span 2" }}>
+            <div style={S.cardHeader}><h2 style={S.cardTitle}>Profit & Loss Statement (Estimated)</h2></div>
+            <div style={{ padding: "1.5rem", display: "flex", gap: "2rem", alignItems: "center" }}>
+
+              {/* Donut Chart */}
+              <div style={{ width: "220px", height: "220px", flexShrink: 0 }}>
+                {netSales > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pnlChartData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={4} dataKey="value">
+                        {pnlChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '12px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: '0.8rem', fontWeight: 600 }}>No Data</div>
+                )}
+              </div>
+
+              {/* P&L Ledger */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid #E2E8F0' }}>
+                  <span style={{ color: '#64748B', fontWeight: 600, fontSize: '0.95rem' }}>Net Sales (Base Revenue)</span>
+                  <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '1.05rem' }}>{formatCurrency(netSales)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px dashed #E2E8F0' }}>
+                  <span style={{ color: '#EF4444', fontWeight: 600, fontSize: '0.95rem' }}>(-) Food Cost (Est. 35%)</span>
+                  <span style={{ fontWeight: 700, color: '#EF4444' }}>{formatCurrency(estimatedCogs)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '2px solid #E2E8F0' }}>
+                  <span style={{ color: '#F59E0B', fontWeight: 600, fontSize: '0.95rem' }}>(-) Operating Expenses (Est. 25%)</span>
+                  <span style={{ fontWeight: 700, color: '#F59E0B' }}>{formatCurrency(operatingExpenses)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px' }}>
+                  <span style={{ color: '#10B981', fontWeight: 800, fontSize: '1.2rem' }}>Net Profit</span>
+                  <span style={{ fontWeight: 800, color: '#10B981', fontSize: '1.2rem' }}>{formatCurrency(netProfit)}</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* MENU PERFORMANCE */}
           <div style={S.card}>
             <div style={S.cardHeader}><h2 style={S.cardTitle}>Top Selling Items</h2></div>
-            <div style={{ padding: "1rem" }}>
+            <div style={{ padding: "1.5rem" }}>
               {topSellingProducts.length === 0 ? (
-                <div style={S.emptyState}>No sales data available.</div>
+                <div style={{ textAlign: "center", color: "#64748B", padding: "2rem 0", fontWeight: 500 }}>No sales data recorded.</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   {topSellingProducts.map((p, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: S.cardHeader.borderBottom }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '8px', backgroundColor: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '8px',
+                          backgroundColor: i === 0 ? '#FFF7F5' : '#F8FAFC',
+                          color: i === 0 ? '#FF5A00' : '#64748B',
+                          border: `1px solid ${i === 0 ? '#FFD8CC' : '#E2E8F0'}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 800
+                        }}>
                           #{i + 1}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: '0.875rem' }}>{p.name}</div>
-                          <div style={{ color: S.pageSubtitle.color, fontSize: '0.75rem' }}>{p.qty} units sold</div>
+                          <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.95rem', marginBottom: '2px' }}>{p.name}</div>
+                          <div style={{ color: '#64748B', fontSize: '0.80rem', fontWeight: 500 }}>{p.qty} units sold</div>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: '0.875rem' }}>{formatCurrency(p.revenue)}</div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>{formatCurrency(p.revenue)}</div>
                     </div>
                   ))}
                 </div>
@@ -507,32 +684,37 @@ export default function Admin() {
             </div>
           </div>
 
-          <div style={S.card}>
-            <div style={S.cardHeader}><h2 style={S.cardTitle}>Branch Performance Ranked</h2></div>
-            <div style={{ padding: "1rem" }}>
+        </div>
+
+        {/* ADMIN EXCLUSIVE: BRANCH RANKINGS */}
+        {role === "ADMIN" && (
+          <div style={{ ...S.card, marginTop: '2rem' }}>
+            <div style={S.cardHeader}><h2 style={S.cardTitle}>Fleet Performance Leaderboard</h2></div>
+            <div style={{ padding: "1.5rem" }}>
               {displayBranches.length === 0 ? (
-                <div style={S.emptyState}>No branches available.</div>
+                <div style={{ color: '#64748B' }}>No branches available.</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {[...displayBranches].sort((a, b) => b.revenue - a.revenue).slice(0, 5).map((b, i) => (
-                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: i === 0 ? '#fef3c7' : '#f8fafc', color: i === 0 ? '#b45309' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                  {[...displayBranches].sort((a, b) => b.revenue - a.revenue).map((b, i) => (
+                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #E2E8F0', borderRadius: '12px', backgroundColor: '#F8FAFC' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: i === 0 ? '#FEF3C7' : '#FFFFFF', color: i === 0 ? '#D97706' : '#64748B', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800 }}>
                           {i + 1}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 500, color: S.pageTitle.color, fontSize: '0.875rem' }}>{b.name}</div>
-                          <div style={{ color: S.pageSubtitle.color, fontSize: '0.75rem' }}>{b.location}</div>
+                          <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.95rem' }}>{b.name}</div>
+                          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 500 }}>{b.location}</div>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: '0.875rem' }}>{formatCurrency(b.revenue)}</div>
+                      <div style={{ fontWeight: 800, color: '#10B981', fontSize: '1rem' }}>{formatCurrency(b.revenue)}</div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           </div>
-        </div>
+        )}
+
       </div>
     );
   };
@@ -574,31 +756,11 @@ export default function Admin() {
           </div>
         </div>
 
-        <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: S.pageTitle.color, borderBottom: S.cardHeader.borderBottom, paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
-            System Preferences
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 500, color: S.pageTitle.color, fontSize: '0.9rem' }}>Dark Mode</div>
-                <div style={{ color: S.pageSubtitle.color, fontSize: '0.8rem' }}>Enable dark theme across the admin console.</div>
-              </div>
-              <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
-                <input type="checkbox" checked={isDarkMode} onChange={(e) => {
-                  setIsDarkMode(e.target.checked);
-                  localStorage.setItem("adminDarkMode", e.target.checked);
-                }} style={{ opacity: 0, width: 0, height: 0 }} />
-                <span style={{ position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isDarkMode ? '#10b981' : '#cbd5e1', borderRadius: '34px', transition: '.4s' }}>
-                  <span style={{ position: 'absolute', content: '""', height: '18px', width: '18px', left: isDarkMode ? '22px' : '4px', bottom: '3px', backgroundColor: 'white', borderRadius: '50%', transition: '.4s' }}></span>
-                </span>
-              </label>
-            </div>
-          </div>
-        </div>
+
       </div>
     </div>
   );
+
 
   // ─── MAIN LAYOUT ───────────────────────────────────────────────────────────
   return (
@@ -670,69 +832,34 @@ export default function Admin() {
 
           <div style={S.topbarRight}>
 
-            {/* NOTIFICATIONS / PENDING MANAGERS */}
+            {/* PENDING REQUESTS BUTTON → links to dedicated page */}
             {role === "ADMIN" && (
-              <div style={{ position: "relative", marginRight: "1rem" }}>
+              <div style={{ marginRight: "1rem" }}>
                 <button
-                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  onClick={() => navigate("/admin/pending-requests")}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '8px',
-                    padding: '8px 16px', borderRadius: '6px', border: S.cardHeader.borderBottom,
-                    backgroundColor: S.sidebar.backgroundColor, color: S.pageTitle.color, fontSize: '0.875rem',
-                    fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s',
+                    padding: '8px 16px', borderRadius: '8px', border: '1px solid #E2E8F0',
+                    backgroundColor: '#FFFFFF', color: '#0F172A', fontSize: '0.875rem',
+                    fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
                     boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)'
                   }}
                 >
                   <Icons.Users />
                   Pending Requests
-                  {pendingManagers.length > 0 && (
+                  {pendingStores.length > 0 && (
                     <span style={{
-                      backgroundColor: '#ef4444', color: '#fff', fontSize: '0.7rem',
-                      fontWeight: 700, padding: '2px 6px', borderRadius: '100px',
+                      backgroundColor: '#FF5A00', color: '#FFFFFF', fontSize: '0.75rem',
+                      fontWeight: 800, padding: '2px 8px', borderRadius: '100px',
                       marginLeft: '4px'
                     }}>
-                      {pendingManagers.length}
+                      {pendingStores.length}
                     </span>
                   )}
                 </button>
-                {isNotificationsOpen && (
-                  <div style={S.notificationsDropdown}>
-                    <div style={S.notificationsHeader}>
-                      <span>Pending Requests</span>
-                    </div>
-                    <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-                      {pendingManagers.length === 0 ? (
-                        <div style={{ padding: "16px", textAlign: "center", color: S.pageSubtitle.color, fontSize: "0.875rem" }}>
-                          No pending requests
-                        </div>
-                      ) : (
-                        pendingManagers.map(manager => (
-                          <div key={manager.id} style={S.notificationItem}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                              <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: "0.9rem" }}>{manager.name || "New Manager"}</div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", color: S.pageSubtitle.color, fontSize: "0.8rem" }}>
-                                <Icons.Mail /> {manager.email}
-                              </div>
-                              {manager.phone && (
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: S.pageSubtitle.color, fontSize: "0.8rem" }}>
-                                  <Icons.Phone /> {manager.phone}
-                                </div>
-                              )}
-                              <div style={{ display: "inline-block", marginTop: "4px", fontSize: "0.7rem", color: S.pageSubtitle.color, fontWeight: 500 }}>
-                                Signed up: {new Date(manager.createdAt).toLocaleDateString()}
-                              </div>
-                            </div>
-                            <button onClick={() => handleApproveManager(manager.id)} style={S.approveBtn}>
-                              Approve
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
+
 
             <div style={{ position: "relative" }}>
               <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} style={S.avatarBtn}>
@@ -773,82 +900,112 @@ export default function Admin() {
 
 // ─── SaaS STYLES ─────────────────────────────────────────────────────────────
 const getStyles = (isDark) => ({
-  layout: { display: "flex", flexDirection: "row", height: "100vh", backgroundColor: isDark ? "#0f172a" : "#f8fafc", fontFamily: "'Inter', sans-serif", color: isDark ? "#f8fafc" : "#0f172a" },
-
-  // Topbar
-  topbar: { height: "64px", backgroundColor: isDark ? "#1e293b" : "#fff", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 1.5rem", flexShrink: 0 },
-  topbarLeft: { display: "flex", alignItems: "center" },
-  topbarRight: { display: "flex", alignItems: "center" },
-  logoIcon: { width: "32px", height: "32px", borderRadius: "8px", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.2rem", fontStyle: "italic", flexShrink: 0 },
-  logoText: { color: isDark ? "#f8fafc" : "#1e293b", fontWeight: "800", letterSpacing: "0.5px", fontSize: "1.25rem", whiteSpace: "nowrap" },
-  collapseBtn: { background: "none", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer", color: isDark ? "#94a3b8" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", borderRadius: "6px", transition: "background 0.2s" },
-  avatarBtn: { width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 5px rgba(236,72,153,0.3)", transition: "transform 0.2s" },
-
-  // Dropdown
-  dropdownMenu: { position: "absolute", top: "120%", right: "0", width: "220px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
-  dropdownHeader: { padding: "16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-  userName: { fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
-  userEmail: { color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.75rem", marginTop: "2px" },
-  userRoleBadge: { display: "inline-block", marginTop: "6px", padding: "2px 8px", backgroundColor: isDark ? "#334155" : "#e2e8f0", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.65rem", fontWeight: "700", borderRadius: "4px" },
-  dropdownDivider: { height: "1px", backgroundColor: isDark ? "#334155" : "#e2e8f0" },
-  dropdownItemLogout: { display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "12px 16px", border: "none", backgroundColor: isDark ? "#1e293b" : "#fff", color: "#dc2626", fontSize: "0.875rem", fontWeight: "500", cursor: "pointer", transition: "background-color 0.2s" },
-
-  // Notifications
-  iconBtn: { background: "none", border: "none", color: isDark ? "#94a3b8" : "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s", position: "relative" },
-  notificationDot: { position: "absolute", top: "2px", right: "2px", backgroundColor: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: "bold", width: "16px", height: "16px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" },
-  notificationsDropdown: { position: "absolute", top: "120%", right: "0", width: "380px", backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", zIndex: 100 },
-  notificationsHeader: { padding: "12px 16px", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, fontWeight: "600", color: isDark ? "#f8fafc" : "#0f172a", fontSize: "0.875rem" },
-  notificationItem: { padding: "16px", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", transition: "background-color 0.15s", ":hover": { backgroundColor: isDark ? "#334155" : "#f8fafc" } },
-  approveBtn: { backgroundColor: "#10b981", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: "600", cursor: "pointer", transition: "background 0.2s", alignSelf: "center", boxShadow: "0 1px 2px rgba(16, 185, 129, 0.2)" },
+  // We force the premium Light Mode aesthetic
+  layout: { display: "flex", flexDirection: "row", height: "100vh", width: "100vw", backgroundColor: "#F8FAFC", fontFamily: "'Inter', sans-serif", color: "#0F172A", overflow: "hidden", boxSizing: "border-box" },
 
   // Body Layout
   bodyWrapper: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" },
 
+  // Topbar
+  topbar: { height: "72px", backgroundColor: "rgba(255, 255, 255, 0.9)", backdropFilter: "blur(12px)", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2rem", flexShrink: 0, zIndex: 50, boxSizing: "border-box" },
+  topbarLeft: { display: "flex", alignItems: "center" },
+  topbarRight: { display: "flex", alignItems: "center" },
+  logoIcon: { width: "36px", height: "36px", borderRadius: "10px", background: "#FF5A00", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "900", fontSize: "1.4rem", flexShrink: 0 },
+  logoText: { color: "#0F172A", fontWeight: "800", letterSpacing: "-0.02em", fontSize: "1.25rem", whiteSpace: "nowrap", marginLeft: "12px" },
+  avatarBtn: { width: "40px", height: "40px", borderRadius: "12px", background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#0F172A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
+
+  // Dropdown
+  dropdownMenu: { position: "absolute", top: "120%", right: "0", width: "220px", backgroundColor: "#FFFFFF", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)", border: "1px solid #E2E8F0", overflow: "hidden", zIndex: 100 },
+  dropdownHeader: { padding: "16px", backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" },
+  userName: { fontWeight: "600", color: "#0F172A", fontSize: "0.875rem" },
+  userEmail: { color: "#64748B", fontSize: "0.75rem", marginTop: "2px" },
+  userRoleBadge: { display: "inline-block", marginTop: "6px", padding: "2px 8px", backgroundColor: "#F1F5F9", color: "#64748B", fontSize: "0.65rem", fontWeight: "700", borderRadius: "4px" },
+  dropdownDivider: { height: "1px", backgroundColor: "#F1F5F9" },
+  dropdownItemLogout: { display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "12px 16px", border: "none", backgroundColor: "#FFFFFF", color: "#EF4444", fontSize: "0.875rem", fontWeight: "600", cursor: "pointer", transition: "background-color 0.2s" },
+
+  // Notifications
+  iconBtn: { background: "none", border: "none", color: "#64748B", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s", position: "relative" },
+  notificationDot: { position: "absolute", top: "2px", right: "2px", backgroundColor: "#FF5A00", color: "#fff", fontSize: "10px", fontWeight: "bold", width: "16px", height: "16px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #FFFFFF" },
+  notificationsDropdown: { position: "absolute", top: "120%", right: "0", width: "380px", backgroundColor: "#FFFFFF", borderRadius: "12px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)", border: "1px solid #E2E8F0", overflow: "hidden", zIndex: 100 },
+  notificationsHeader: { padding: "12px 16px", backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0", fontWeight: "600", color: "#0F172A", fontSize: "0.875rem" },
+  notificationItem: { padding: "16px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "flex-start", transition: "background-color 0.15s", ":hover": { backgroundColor: "#F8FAFC" } },
+  approveBtn: { backgroundColor: "#FF5A00", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: "600", cursor: "pointer", transition: "background 0.2s", alignSelf: "center", boxShadow: "0 1px 2px rgba(255, 90, 0, 0.2)" },
+
   // Sidebar
-  sidebar: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRight: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)" },
-  sidebarHeader: { height: "64px", display: "flex", alignItems: "center", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, gap: "10px", flexShrink: 0 },
-  sidebarNav: { padding: "16px 12px", display: "flex", flexDirection: "column", gap: "8px" },
-  sidebarNavItem: { display: "flex", alignItems: "center", gap: "12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", cursor: "pointer", transition: "all 0.15s ease", overflow: "hidden" },
-  sidebarNavItemActive: { backgroundColor: isDark ? "#334155" : "#f1f5f9", color: isDark ? "#f8fafc" : "#0f172a", fontWeight: 600 },
+  sidebar: { backgroundColor: "#FFFFFF", borderRight: "1px solid #E2E8F0", display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.3s cubic-bezier(0.16, 1, 0.3, 1)" },
+  sidebarHeader: { height: "72px", display: "flex", alignItems: "center", borderBottom: "1px solid #E2E8F0", flexShrink: 0, paddingLeft: "20px" },
+  sidebarNav: { padding: "24px 16px", display: "flex", flexDirection: "column", gap: "8px" },
+  sidebarNavItem: { display: "flex", alignItems: "center", gap: "12px", borderRadius: "10px", fontSize: "0.9rem", fontWeight: 600, color: "#64748B", cursor: "pointer", transition: "all 0.2s ease", overflow: "hidden", boxSizing: "border-box" },
+  sidebarNavItemActive: { backgroundColor: "#FFF7F5", color: "#FF5A00", borderLeft: "3px solid #FF5A00" },
   sidebarIcon: { display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", flexShrink: 0 },
 
   // Main Area
-  mainArea: { flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", color: isDark ? "#f8fafc" : "#0f172a" },
-  mainContent: { maxWidth: "1200px", width: "100%", margin: "0 auto", padding: "2.5rem 2rem" },
-  headerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" },
+  mainArea: { flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", color: "#0F172A" },
+  mainContent: { maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "3rem 2.5rem", boxSizing: "border-box" },
+  headerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2.5rem" },
 
   // Typography
-  pageTitle: { fontSize: "1.5rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: "0 0 4px 0", letterSpacing: "-0.01em" },
-  pageSubtitle: { fontSize: "0.875rem", color: isDark ? "#94a3b8" : "#64748b", margin: 0 },
+  pageTitle: { fontSize: "2rem", fontWeight: 800, color: "#0F172A", margin: "0 0 8px 0", letterSpacing: "-0.03em" },
+  pageSubtitle: { fontSize: "1rem", color: "#64748B", margin: 0 },
 
-  // Stats
-  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginBottom: "2rem" },
-  statCard: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" },
+  // Fleet Grid & Cards
+  storeGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "1.5rem" },
+  storeCard: { backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E2E8F0", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.5rem", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)", cursor: "pointer" },
+  storeCardHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
+  storeIcon: { width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#FFF7F5", border: "1px solid #FFD8CC", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", flexShrink: 0 },
+  storeName: { fontSize: "1.1rem", fontWeight: 800, color: "#0F172A", margin: "0 0 4px 0", letterSpacing: "-0.01em" },
+  storeLocation: { fontSize: "0.85rem", color: "#64748B", margin: 0 },
+
+  // Status Badges
+  statusBadgeLive: { display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "100px", backgroundColor: "#F0FDF4", border: "1px solid #DCFCE7", color: "#16A34A", fontSize: "0.75rem", fontWeight: 700 },
+  statusBadgeOffline: { display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "100px", backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B", fontSize: "0.75rem", fontWeight: 700 },
+  statusDot: { width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "currentColor" },
+
+  // Card Metrics
+  storeMetrics: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", padding: "1rem", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px solid #F1F5F9" },
+  metricBox: { display: "flex", flexDirection: "column", gap: "4px" },
+  metricLabel: { fontSize: "0.75rem", color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" },
+  metricValue: { fontSize: "1.1rem", color: "#0F172A", fontWeight: 800 },
+
+  // Command Center specific
+  commandHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '1.5rem', marginBottom: '2.5rem', paddingBottom: '2rem', borderBottom: '1px solid #E2E8F0' },
+  commandIcon: { width: "64px", height: "64px", borderRadius: "16px", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" },
+  avatarBtnLg: { width: "48px", height: "48px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center" },
+
+  // Additional Buttons
+  actionBtnBlue: { width: "100%", padding: "10px", borderRadius: "8px", fontSize: "0.9rem", fontWeight: 700, color: "#FFFFFF", backgroundColor: "#0F172A", border: "none", cursor: "pointer", transition: "background 0.2s" },
+  actionBtnRedOutline: { padding: "8px 16px", borderRadius: "8px", fontSize: "0.875rem", fontWeight: 700, color: "#EF4444", backgroundColor: "#FFFFFF", border: "1px solid #FEE2E2", cursor: "pointer", transition: "all 0.2s" },
+
+  // Stats Grid
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.5rem", marginBottom: "3rem" },
+  statCard: { backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E2E8F0", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", boxSizing: "border-box" },
   statHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  statLabel: { fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b" },
-  statValue: { fontSize: "1.875rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", letterSpacing: "-0.02em", lineHeight: "1.2" },
-  trendBadge: { fontSize: "0.75rem", fontWeight: 600, padding: "2px 8px", borderRadius: "100px", alignSelf: "flex-start", display: "inline-flex", alignItems: "center" },
+  statLabel: { fontSize: "0.875rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em" },
+  statValue: { fontSize: "2.25rem", fontWeight: 800, color: "#0F172A", letterSpacing: "-0.03em", lineHeight: "1" },
+  trendBadge: { fontSize: "0.75rem", fontWeight: 700, padding: "4px 10px", borderRadius: "6px", display: "inline-flex", alignItems: "center" },
 
-  // Cards & Tables
+  // Cards
   chartGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.5rem", marginBottom: "2rem" },
-  card: { backgroundColor: isDark ? "#1e293b" : "#fff", borderRadius: "8px", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, overflow: "hidden", display: "flex", flexDirection: "column" },
-  cardHeader: { padding: "1rem 1.25rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-  cardTitle: { fontSize: "0.9rem", fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { padding: "0.75rem 1.25rem", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: isDark ? "#94a3b8" : "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: isDark ? "#0f172a" : "#f8fafc", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}` },
-  tr: { borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, transition: "background-color 0.15s", cursor: "pointer" },
-  td: { padding: "1rem 1.25rem", verticalAlign: "middle", color: isDark ? "#f8fafc" : "#0f172a" },
-
-  // Buttons
-  primaryBtn: { padding: "8px 16px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: "#fff", backgroundColor: isDark ? "#3b82f6" : "#0f172a", border: "none", cursor: "pointer" },
-  actionBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#f8fafc" : "#0f172a", backgroundColor: isDark ? "#334155" : "#fff", border: `1px solid ${isDark ? "#475569" : "#cbd5e1"}`, cursor: "pointer", transition: "all 0.15s" },
-  secondaryBtn: { padding: "6px 12px", borderRadius: "6px", fontSize: "0.875rem", fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", backgroundColor: isDark ? "#1e293b" : "#fff", border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, cursor: "pointer" },
-  linkBtn: { padding: 0, border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" },
+  card: { backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E2E8F0", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", boxSizing: "border-box" },
+  cardHeader: { padding: "1.5rem", borderBottom: "1px solid #F1F5F9", boxSizing: "border-box" },
+  cardTitle: { fontSize: "1.1rem", fontWeight: 700, color: "#0F172A", margin: 0 },
 
   // Tabs
-  tabs: { display: "flex", gap: "1.5rem", borderBottom: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, marginBottom: "1.5rem" },
-  tabBtn: { padding: "0 0 0.75rem 0", border: "none", background: "none", color: isDark ? "#94a3b8" : "#64748b", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", borderBottom: "2px solid transparent", transition: "all 0.15s" },
-  tabBtnActive: { color: isDark ? "#f8fafc" : "#0f172a", borderBottomColor: isDark ? "#f8fafc" : "#0f172a" },
+  tabs: { display: "flex", gap: "2rem", borderBottom: "1px solid #E2E8F0", marginBottom: "2rem" },
+  tabBtn: { padding: "0 0 1rem 0", border: "none", background: "none", color: "#64748B", fontSize: "0.95rem", fontWeight: 600, cursor: "pointer", borderBottom: "2px solid transparent", transition: "all 0.2s" },
+  tabBtnActive: { color: "#FF5A00", borderBottomColor: "#FF5A00" },
 
-  emptyState: { padding: "4rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", color: isDark ? "#64748b" : "#94a3b8", fontSize: "0.875rem", textAlign: "center" }
+  // Tables
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { padding: "1rem 1.5rem", textAlign: "left", fontSize: "0.75rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" },
+  tr: { borderBottom: "1px solid #F1F5F9", transition: "background-color 0.2s", cursor: "pointer" },
+  td: { padding: "1.25rem 1.5rem", verticalAlign: "middle", color: "#475569" },
+
+  // Buttons
+  primaryBtn: { padding: "10px 20px", borderRadius: "8px", fontSize: "0.9rem", fontWeight: 700, color: "#fff", backgroundColor: "#FF5A00", border: "none", cursor: "pointer", transition: "transform 0.1s", boxShadow: "0 4px 6px rgba(255, 90, 0, 0.2)" },
+  actionBtn: { padding: "8px 16px", borderRadius: "8px", fontSize: "0.875rem", fontWeight: 600, color: "#0F172A", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" },
+  downloadButton: { padding: "10px 18px", borderRadius: "8px", fontSize: "0.9rem", fontWeight: 700, color: "#475569", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" },
+  linkBtn: { background: "none", border: "none", color: "#FF5A00", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: "1rem", display: "inline-flex", alignItems: "center", transition: "all 0.2s" },
+
+  emptyState: { padding: "5rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", color: "#64748B", fontSize: "1rem", textAlign: "center", fontWeight: 500 }
 });

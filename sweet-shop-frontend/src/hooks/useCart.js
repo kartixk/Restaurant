@@ -13,7 +13,6 @@ export function useCart() {
             const { data } = await api.get("/cart");
             return data;
         },
-        // We can retry fetching cart on failure sometimes, but we'll let components handle 401
         retry: 1
     });
 }
@@ -22,8 +21,8 @@ export function useCart() {
 export function useAddToCart() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ sweetId, quantity }) => {
-            const { data } = await api.post("/cart/items", { sweetId, quantity });
+        mutationFn: async ({ productId, quantity }) => {
+            const { data } = await api.post("/cart/items", { productId, quantity });
             return data;
         },
         onSuccess: () => {
@@ -36,8 +35,8 @@ export function useAddToCart() {
 export function useUpdateCartItem() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ sweetId, quantity }) => {
-            const { data } = await api.put(`/cart/items/${sweetId}`, { quantity });
+        mutationFn: async ({ productId, quantity }) => {
+            const { data } = await api.put(`/cart/items/${productId}`, { quantity });
             return data;
         },
         onSuccess: () => {
@@ -50,8 +49,8 @@ export function useUpdateCartItem() {
 export function useRemoveCartItem() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (sweetId) => {
-            const { data } = await api.delete(`/cart/items/${sweetId}`);
+        mutationFn: async (productId) => {
+            const { data } = await api.delete(`/cart/items/${productId}`);
             return data;
         },
         onSuccess: () => {
@@ -74,17 +73,29 @@ export function useConfirmOrder() {
     });
 }
 
+// Update Order Type
+export function useUpdateOrderType() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (orderType) => {
+            const { data } = await api.put("/cart/order-type", { orderType });
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: cartKeys.all });
+        },
+    });
+}
+
 // Fast Buy
 export function useFastBuy() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ sweetId, quantity }) => {
-            const { data } = await api.post("/cart/buy-now", { sweetId, quantity });
+        mutationFn: async ({ productId, quantity }) => {
+            const { data } = await api.post("/cart/buy-now", { productId, quantity });
             return data;
         },
         onSuccess: () => {
-            // Invalidate both sweets and cart conceptually if needed,
-            // but Fast Buy affects sweets stock immediately
             queryClient.invalidateQueries({ queryKey: ["sweets"] });
         },
     });
