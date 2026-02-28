@@ -21,6 +21,13 @@ export default function ManagerApprovalList() {
         }
     };
 
+    // Helper to process Cloudinary and Local URLs
+    const getFullUrl = (url) => {
+        if (!url) return "#";
+        // Use absolute URL if it starts with http, otherwise prepend backend URL
+        return url.startsWith('http') ? url : `http://localhost:4000${url}`;
+    };
+
     useEffect(() => {
         fetchPendingManagers();
     }, []);
@@ -71,7 +78,7 @@ export default function ManagerApprovalList() {
                             <div style={{
                                 width: '64px', height: '64px', borderRadius: '12px',
                                 background: manager.managedBranch?.managerPhotoUrl
-                                    ? `url(http://localhost:4000${manager.managedBranch.managerPhotoUrl}) center/cover`
+                                    ? `url(${getFullUrl(manager.managedBranch.managerPhotoUrl)}) center/cover`
                                     : '#f1f5f9',
                                 border: '1px solid #e2e8f0', flexShrink: 0, marginRight: '1rem'
                             }} />
@@ -98,21 +105,21 @@ export default function ManagerApprovalList() {
                                 {/* Document Links */}
                                 <div style={{ display: 'flex', gap: '1.5rem', background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                                     <a
-                                        href={manager.managedBranch?.fssaiPdfUrl ? `http://localhost:4000${manager.managedBranch.fssaiPdfUrl}` : '#'}
+                                        href={getFullUrl(manager.managedBranch?.fssaiPdfUrl)}
                                         target="_blank" rel="noopener noreferrer"
                                         style={{ color: manager.managedBranch?.fssaiPdfUrl ? '#FF5A00' : '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
                                     >
                                         📄 FSSAI Document
                                     </a>
                                     <a
-                                        href={manager.managedBranch?.gstPdfUrl ? `http://localhost:4000${manager.managedBranch.gstPdfUrl}` : '#'}
+                                        href={getFullUrl(manager.managedBranch?.gstPdfUrl)}
                                         target="_blank" rel="noopener noreferrer"
                                         style={{ color: manager.managedBranch?.gstPdfUrl ? '#FF5A00' : '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
                                     >
                                         📄 GST Certificate
                                     </a>
                                     <a
-                                        href={manager.managedBranch?.bankPassbookPdfUrl ? `http://localhost:4000${manager.managedBranch.bankPassbookPdfUrl}` : '#'}
+                                        href={getFullUrl(manager.managedBranch?.bankPassbookPdfUrl)}
                                         target="_blank" rel="noopener noreferrer"
                                         style={{ color: manager.managedBranch?.bankPassbookPdfUrl ? '#FF5A00' : '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
                                     >

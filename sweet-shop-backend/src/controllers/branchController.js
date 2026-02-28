@@ -1,4 +1,5 @@
 const branchService = require("../services/branchService");
+const cloudinary = require("../config/cloudinary");
 
 const createBranch = async (req, res, next) => {
     try {
@@ -105,12 +106,17 @@ const uploadDocuments = async (req, res, next) => {
         const urls = {};
 
         if (files) {
-            Object.keys(files).forEach(key => {
+            for (const key of Object.keys(files)) {
                 const file = files[key][0];
                 const subdir = file.fieldname === 'managerPhoto' ? 'profiles' : 'docs';
-                // Public URL path
-                urls[key] = `/uploads/${subdir}/${file.filename}`;
-            });
+                // Upload to Cloudinary
+                const result = await cloudinary.uploader.upload(file.path, {
+                    folder: `sweet-shop/${subdir}`,
+                    resource_type: 'auto'
+                });
+
+                urls[key] = result.secure_url;
+            }
         }
 
         res.status(200).json({ urls });
@@ -118,6 +124,7 @@ const uploadDocuments = async (req, res, next) => {
         next(err);
     }
 };
+
 
 const verifyBranch = async (req, res, next) => {
     try {

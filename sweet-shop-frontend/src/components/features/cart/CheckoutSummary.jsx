@@ -16,7 +16,7 @@ export default function CheckoutSummary() {
 
         // Header
         doc.setFontSize(18);
-        doc.text("FoodFlow - Order Invoice", 14, 20);
+        doc.text("Velvet Plate - Order Invoice", 14, 20);
         doc.setFontSize(12);
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 30);
         doc.text(`Status: Paid / Confirmed`, 14, 36);

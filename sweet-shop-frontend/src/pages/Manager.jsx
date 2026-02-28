@@ -192,7 +192,7 @@ function ManagerDashboard({ branch, logout }) {
     const { sales, products, summary } = dashboardData;
     const recentOrders = sales.slice(0, 5);
     const chartData = Array.from({ length: 7 }).map((_, i) => ({ date: `Day ${i + 1}`, revenue: Math.floor(Math.random() * 5000) + 1000, orders: Math.floor(Math.random() * 20) + 5 }));
-    const pieData = [{ name: 'Dine-in', value: 45, color: '#f59e0b' }, { name: 'Delivery', value: 35, color: '#3b82f6' }, { name: 'Takeaway', value: 20, color: '#10b981' }];
+    const pieData = [{ name: 'Dine-in', value: 65, color: '#f59e0b' }, { name: 'Takeaway', value: 35, color: '#10b981' }];
 
     const renderOverview = () => (
         <div style={{ padding: "0" }}>

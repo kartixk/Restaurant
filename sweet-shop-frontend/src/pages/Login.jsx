@@ -4,8 +4,9 @@ import api from "../api/axios";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import useAuthStore from "../store/useAuthStore";
-import { Mail, Lock, Eye, EyeOff, KeyRound } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, KeyRound, UtensilsCrossed } from "lucide-react";
 import "./Login.css";
+import { useEffect } from "react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,13 @@ export default function Login() {
 
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Clear any stale auth state when landing on login page to prevent 401s from global hooks
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userData");
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -36,7 +44,15 @@ export default function Login() {
         navigate("/");
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.message || "Invalid email or password");
+      let errMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Invalid email or password";
+
+      if (err.response?.status === 404 || errMsg === "User not found") {
+        errMsg = "Please create an account";
+      } else if (typeof errMsg === 'object') {
+        errMsg = errMsg.message || "An unexpected error occurred.";
+      }
+
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -64,6 +80,7 @@ export default function Login() {
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
       >
         <div className="login-header">
+
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}

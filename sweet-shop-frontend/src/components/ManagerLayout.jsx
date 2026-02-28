@@ -95,10 +95,10 @@ export default function ManagerLayout({ children, title, subtitle }) {
         <div className={`manager-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <aside className="manager-sidebar">
                 <div className="manager-sidebar-header">
-                    <div className="manager-logo-icon">F</div>
+                    <div className="manager-logo-icon">V</div>
                     {!isSidebarCollapsed && (
                         <div>
-                            <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1 }}>FoodFlow</span>
+                            <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1 }}>Velvet Plate</span>
                             <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#f59e0b", letterSpacing: "1px", textTransform: "uppercase" }}>Partner Center</span>
                         </div>
                     )}

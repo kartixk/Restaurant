@@ -37,8 +37,11 @@ const login = async (req, res, next) => {
             user: { id: user.id, _id: user.id, email: user.email, name: user.name, role: user.role, isVerified: user.isVerified },
         });
     } catch (err) {
-        if (err.message === "Invalid credentials" || err.message === "Account pending admin approval") {
-            const statusCode = err.message === "Invalid credentials" ? 400 : 403;
+        if (err.message === "User not found" || err.message === "Invalid credentials" || err.message === "Account pending admin approval") {
+            let statusCode = 400;
+            if (err.message === "User not found") statusCode = 404;
+            else if (err.message === "Account pending admin approval") statusCode = 403;
+
             return res.status(statusCode).json({ error: err.message });
         }
         next(err);

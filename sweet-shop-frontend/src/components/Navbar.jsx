@@ -45,9 +45,9 @@ export default function Navbar() {
           {/* 1. BRAND LOGO */}
           <Link to={isAdminPage ? "/admin" : "/"} className="navbar-logo" style={{ ...styles.logo, margin: isAuthPage ? '0 auto' : '0' }}>
             <div style={styles.logoIcon}>
-              <span style={styles.logoIconText}>F</span>
+              <span style={styles.logoIconText}>V</span>
             </div>
-            <span style={styles.logoText}>FoodFlow</span>
+            <span style={styles.logoText}>Velvet Plate</span>
           </Link>
 
           {/* 2. CENTERED NAVIGATION LINKS (Hidden for Admin) */}

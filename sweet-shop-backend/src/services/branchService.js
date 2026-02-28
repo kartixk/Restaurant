@@ -132,6 +132,17 @@ const onboardBranch = async (data) => {
         state: data.state,
         pincode: data.pincode,
         phone: data.phone,
+
+        // New Manager specific fields
+        managerName: data.managerName,
+        managerPhone: data.managerPhone,
+        managerAddress: data.managerAddress,
+        managerCity: data.managerCity,
+        managerState: data.managerState,
+        managerPincode: data.managerPincode,
+        panNumber: data.panNumber,
+        aadharNumber: data.aadharNumber,
+
         gstNumber: data.gstNumber,
         fssaiLicense: data.fssaiLicense,
         bankAccountName: data.bankAccountName,

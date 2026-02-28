@@ -9,7 +9,15 @@ import api from "../api/axios";
 export default function ManagerOnboarding({ onComplete }) {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
+        // Basic Info
         name: "", branchName: "", phone: "",
+
+        // Manager Details
+        managerName: "", managerPhone: "", managerAddress: "",
+        managerCity: "", managerState: "", managerPincode: "",
+        panNumber: "", aadharNumber: "",
+
+        // Location
         address: "", city: "", state: "", pincode: "",
         gstNumber: "", fssaiLicense: "",
         bankAccountName: "", bankAccountNumber: "", bankIfscCode: "",
@@ -103,7 +111,26 @@ export default function ManagerOnboarding({ onComplete }) {
         }
     };
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleChange = (e) => {
+        let { name, value } = e.target;
+
+        // Strict Validation Rules
+        if (name === "phone" || name === "managerPhone") {
+            value = value.replace(/\D/g, '').slice(0, 10);
+        } else if (name === "pincode" || name === "managerPincode") {
+            value = value.replace(/\D/g, '').slice(0, 6);
+        } else if (name === "aadharNumber") {
+            value = value.replace(/\D/g, '').slice(0, 12);
+        } else if (name === "panNumber") {
+            value = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+        } else if (name === "gstNumber") {
+            value = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 15);
+        } else if (name === "fssaiLicense") {
+            value = value.replace(/\D/g, '').slice(0, 14);
+        }
+
+        setFormData({ ...formData, [name]: value });
+    };
 
     // Component for File Inputs
     const FileInput = ({ field, label, icon: Icon, type = "pdf", currentUrl }) => (
@@ -168,34 +195,6 @@ export default function ManagerOnboarding({ onComplete }) {
                 animate="visible"
             >
                 <div style={S.header}>
-                    {/* Profile Photo Upload Section */}
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                        <label
-                            htmlFor="managerPhoto"
-                            style={{
-                                ...S.logo,
-                                width: '100px', height: '100px',
-                                background: formData.managerPhotoUrl ? `url(http://localhost:4000${formData.managerPhotoUrl}) center/cover` : '#FFF7F5',
-                                border: formData.managerPhotoUrl ? '2px solid #FF5A00' : '2px dashed #FFD8CC',
-                                margin: 0, cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                transition: 'all 0.3s ease'
-                            }}
-                        >
-                            <input type="file" accept="image/*" id="managerPhoto" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'managerPhoto')} />
-                            {uploading.managerPhoto ? (
-                                <div style={{ background: 'rgba(255,255,255,0.7)', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <RefreshCw size={24} color="#FF5A00" className="spin" />
-                                </div>
-                            ) : !formData.managerPhotoUrl && (
-                                <div style={{ textAlign: 'center' }}>
-                                    <ImageIcon size={32} color="#FF5A00" style={{ opacity: 0.5 }} />
-                                    <p style={{ fontSize: '0.65rem', color: '#FF5A00', margin: '4px 0 0', fontWeight: 700 }}>PHOTO *</p>
-                                </div>
-                            )}
-                        </label>
-                    </div>
-
                     <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800, color: "#0F172A", letterSpacing: "-0.03em" }}>Partner Onboarding</h1>
                     <p style={{ color: "#64748B", margin: "0.5rem 0 0 0", fontWeight: 500 }}>Submit your legal and business profile for verification.</p>
                 </div>
@@ -215,8 +214,82 @@ export default function ManagerOnboarding({ onComplete }) {
                                 <input type="text" name="branchName" value={formData.branchName} onChange={handleChange} required style={S.input} placeholder="e.g. Downtown" />
                             </div>
                             <div style={S.inputGroup}>
-                                <label style={S.label}>Contact Phone *</label>
-                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required style={S.input} placeholder="+91 XXXXX XXXXX" />
+                                <label style={S.label}>Restaurant Phone *</label>
+                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required style={S.input} placeholder="+91 10-digit number" />
+                            </div>
+                        </div>
+
+                        {/* Manager Details */}
+                        <h4 style={{ ...S.sectionTitle, fontSize: "1rem", marginTop: "1.5rem", color: "#475569" }}>Manager Details</h4>
+                        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap-reverse' }}>
+                            <div style={{ flex: 1, minWidth: '300px' }}>
+                                <div style={S.grid2}>
+                                    <div style={S.inputGroup}>
+                                        <label style={S.label}>Manager Full Name *</label>
+                                        <input type="text" name="managerName" value={formData.managerName} onChange={handleChange} required style={S.input} placeholder="John Doe" />
+                                    </div>
+                                    <div style={S.inputGroup}>
+                                        <label style={S.label}>Manager Phone *</label>
+                                        <input type="tel" name="managerPhone" value={formData.managerPhone} onChange={handleChange} required style={S.input} placeholder="10-digit number" />
+                                    </div>
+                                    <div style={S.inputGroup}>
+                                        <label style={S.label}>Manager PAN Number *</label>
+                                        <input type="text" name="panNumber" value={formData.panNumber} onChange={handleChange} required style={S.input} placeholder="ABCDE1234F" />
+                                    </div>
+                                    <div style={S.inputGroup}>
+                                        <label style={S.label}>Manager Aadhar Number *</label>
+                                        <input type="text" name="aadharNumber" value={formData.aadharNumber} onChange={handleChange} required style={S.input} placeholder="12-digit number" />
+                                    </div>
+                                </div>
+
+                                <div style={{ ...S.inputGroup, marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+                                    <label style={S.label}>Manager Full Address *</label>
+                                    <input type="text" name="managerAddress" value={formData.managerAddress} onChange={handleChange} required style={S.input} placeholder="Apt, Street, Landmark..." />
+                                </div>
+
+                                <div style={{ ...S.grid2, gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+                                    <div style={S.inputGroup}>
+                                        <label style={S.label}>Manager City *</label>
+                                        <input type="text" name="managerCity" value={formData.managerCity} onChange={handleChange} required style={S.input} placeholder="City Name" />
+                                    </div>
+                                    <div style={S.inputGroup}>
+                                        <label style={S.label}>Manager State *</label>
+                                        <input type="text" name="managerState" value={formData.managerState} onChange={handleChange} required style={S.input} placeholder="State" />
+                                    </div>
+                                    <div style={S.inputGroup}>
+                                        <label style={S.label}>Pincode *</label>
+                                        <input type="text" name="managerPincode" value={formData.managerPincode} onChange={handleChange} required style={S.input} placeholder="XXXXXX" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Manager Profile Photo */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '1.5rem', minWidth: '150px' }}>
+                                <label style={{ ...S.label, marginBottom: '0.5rem' }}>PROFILE PHOTO *</label>
+                                <label
+                                    htmlFor="managerPhoto"
+                                    style={{
+                                        ...S.logo,
+                                        width: '120px', height: '120px',
+                                        background: formData.managerPhotoUrl ? `url(${formData.managerPhotoUrl}) center/cover` : '#FFF7F5',
+                                        border: formData.managerPhotoUrl ? '2px solid #FF5A00' : '2px dashed #FFD8CC',
+                                        margin: 0, cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                >
+                                    <input type="file" accept="image/*" id="managerPhoto" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'managerPhoto')} />
+                                    {uploading.managerPhoto ? (
+                                        <div style={{ background: 'rgba(255,255,255,0.7)', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <RefreshCw size={24} color="#FF5A00" className="spin" />
+                                        </div>
+                                    ) : !formData.managerPhotoUrl && (
+                                        <div style={{ textAlign: 'center' }}>
+                                            <ImageIcon size={32} color="#FF5A00" style={{ opacity: 0.5 }} />
+                                            <p style={{ fontSize: '0.65rem', color: '#FF5A00', margin: '4px 0 0', fontWeight: 700 }}>UPLOAD</p>
+                                        </div>
+                                    )}
+                                </label>
                             </div>
                         </div>
                     </motion.div>
