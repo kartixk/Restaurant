@@ -1,0 +1,31 @@
+[
+  {
+    "id": "69a296992c1281f970ae8d3b",
+    "name": "KFC",
+    "branchName": "GOLE BAZAR",
+    "location": "Kharapur",
+    "address": "Door No-12345",
+    "city": "Kharapur",
+    "state": "West Bengal",
+    "pincode": "721301",
+    "phone": "8250977949",
+    "gstNumber": "12345678909876543",
+    "fssaiLicense": "123456789098765432",
+    "bankAccountName": "kartikeyaa",
+    "bankAccountNumber": "12345678978",
+    "bankIfscCode": "123456",
+    "openTime": "10:00",
+    "closeTime": "22:00",
+    "storeImageUrl": null,
+    "licenseImageUrl": null,
+    "fssaiPdfUrl": "/uploads/docs/fssaiDoc-1772263023810-380003307.pdf",
+    "gstPdfUrl": "/uploads/docs/gstDoc-1772263048440-801391241.pdf",
+    "bankPassbookPdfUrl": "/uploads/docs/bankPassbook-1772263062793-223780946.pdf",
+    "managerPhotoUrl": "/uploads/profiles/managerPhoto-1772263038068-334853858.jpg",
+    "isVisible": true,
+    "storeStatus": "verified",
+    "managerId": "69a296002c1281f970ae8d39",
+    "createdAt": "2026-02-28T07:17:45.079Z",
+    "updatedAt": "2026-02-28T07:18:03.333Z"
+  }
+]

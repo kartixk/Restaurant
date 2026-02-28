@@ -38,6 +38,17 @@ model Branch {
   state             String?
   pincode           String?
   phone             String?
+  
+  // New Manager Details
+  managerName       String?
+  managerPhone      String?
+  managerAddress    String?
+  managerCity       String?
+  managerState      String?
+  managerPincode    String?
+  panNumber         String?
+  aadharNumber      String?
+  
   gstNumber         String
   fssaiLicense      String?
   bankAccountName   String?

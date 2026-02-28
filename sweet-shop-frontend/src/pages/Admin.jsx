@@ -194,12 +194,13 @@ export default function Admin() {
     return {
       id: b.id, name: b.name, location: b.location,
       managerName: b.manager?.name, managerEmail: b.manager?.email, managerPhone: b.manager?.phone || "+91 9999999999",
-      status: b.storeStatus?.toLowerCase() === 'verified' ? 'active' : 'inactive',
-      revenue: branchRevenue
+      status: b.storeStatus?.toLowerCase() === 'verified' ? (b.isVisible ? 'active' : 'paused') : 'inactive',
+      revenue: branchRevenue,
+      isVisible: b.isVisible
     };
   });
 
-  const activeBranchesCount = displayBranches.filter(b => b.status === 'active').length;
+  const activeBranchesCount = displayBranches.filter(b => b.status === 'active' || b.status === 'paused').length;
 
   // Chart Data Preparation (using real sales list or falling back to empty shape)
   const revenueChartData = useMemo(() => {
@@ -215,7 +216,6 @@ export default function Admin() {
 
   const pieData = [
     { name: 'Dine-in', value: 45, color: S.pageTitle.color },
-    { name: 'Delivery', value: 35, color: '#3b82f6' },
     { name: 'Takeaway', value: 20, color: S.pageSubtitle.color },
   ];
 
@@ -294,7 +294,7 @@ export default function Admin() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {displayBranches
-                  .filter(b => b.status === 'active')
+                  .filter(b => b.status === 'active' || b.status === 'paused')
                   .sort((a, b) => b.revenue - a.revenue)
                   .slice(0, 5)
                   .map((b, i) => (
@@ -326,7 +326,7 @@ export default function Admin() {
     const authorizedBranches = (role === "ADMIN"
       ? displayBranches
       : displayBranches.filter(b => b.managerEmail === user?.email)
-    ).filter(b => b.status === 'active');
+    ).filter(b => b.status === 'active' || b.status === 'paused');
 
     return (
       <div style={S.mainContent}>
@@ -363,9 +363,9 @@ export default function Admin() {
                       <p style={S.storeLocation}>{branch.location}</p>
                     </div>
                   </div>
-                  <div style={branch.status === 'active' ? S.statusBadgeLive : S.statusBadgeOffline}>
-                    <span style={S.statusDot}></span>
-                    {branch.status === 'active' ? 'Accepting Orders' : 'Offline'}
+                  <div style={branch.status === 'active' ? S.statusBadgeLive : (branch.status === 'paused' ? { ...S.statusBadgeOffline, color: '#94a3b8', backgroundColor: '#f1f5f9' } : S.statusBadgeOffline)}>
+                    <span style={{ ...S.statusDot, backgroundColor: branch.status === 'active' ? '#10b981' : '#94a3b8' }}></span>
+                    {branch.status === 'active' ? 'Accepting Orders' : (branch.status === 'paused' ? 'Inactive' : 'Offline')}
                   </div>
                 </div>
 
@@ -413,9 +413,9 @@ export default function Admin() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '4px' }}>
                 <h1 style={S.pageTitle}>{branch.name}</h1>
-                <div style={branch.status === 'active' ? S.statusBadgeLive : S.statusBadgeOffline}>
-                  <span style={S.statusDot}></span>
-                  {branch.status === 'active' ? 'Live' : 'Offline'}
+                <div style={branch.status === 'active' ? S.statusBadgeLive : (branch.status === 'paused' ? { ...S.statusBadgeOffline, color: '#94a3b8', backgroundColor: '#f1f5f9' } : S.statusBadgeOffline)}>
+                  <span style={{ ...S.statusDot, backgroundColor: branch.status === 'active' ? '#10b981' : '#94a3b8' }}></span>
+                  {branch.status === 'active' ? 'Live' : (branch.status === 'paused' ? 'Inactive' : 'Offline')}
                 </div>
               </div>
               <p style={{ ...S.pageSubtitle, display: 'flex', gap: '1.5rem' }}>
@@ -510,7 +510,7 @@ export default function Admin() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={4} dataKey="value">
-                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={index === 0 ? '#0F172A' : '#FF5A00'} />)}
+                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={index === 0 ? '#1e293b' : '#f59e0b'} />)}
                       </Pie>
                       <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }} formatter={(val) => `${val}%`} />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: '0.875rem', color: '#64748B', marginTop: '10px' }} />
@@ -773,8 +773,8 @@ export default function Admin() {
 
           {/* Logo Header inside Sidebar */}
           <div style={{ ...S.sidebarHeader, padding: isSidebarCollapsed ? "0" : "0 20px", justifyContent: isSidebarCollapsed ? "center" : "flex-start" }}>
-            <div style={S.logoIcon}>F</div>
-            {!isSidebarCollapsed && <span style={S.logoText}>FoodFlow</span>}
+            <div style={S.logoIcon}>V</div>
+            {!isSidebarCollapsed && <span style={S.logoText}>Velvet Plate</span>}
           </div>
 
           <nav style={S.sidebarNav}>

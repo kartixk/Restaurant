@@ -60,16 +60,17 @@ export default function ManagerDashboard() {
             { name: 'No Data', value: 1, color: '#e2e8f0' }
         ];
 
-        const types = { 'DINE_IN': 0, 'TAKEAWAY': 0, 'DELIVERY': 0 };
+        const types = { 'DINE_IN': 0, 'TAKEAWAY': 0 };
         data.sales.forEach(sale => {
             const t = (sale.orderType || 'DINE_IN').toUpperCase();
-            types[t] = (types[t] || 0) + 1;
+            if (types[t] !== undefined) {
+                types[t] = types[t] + 1;
+            }
         });
 
         return [
             { name: 'Dine-in', value: types.DINE_IN, color: '#f59e0b' },
-            { name: 'Takeaway', value: types.TAKEAWAY, color: '#10b981' },
-            { name: 'Delivery', value: types.DELIVERY, color: '#3b82f6' }
+            { name: 'Takeaway', value: types.TAKEAWAY, color: '#10b981' }
         ].filter(item => item.value > 0);
     };
 

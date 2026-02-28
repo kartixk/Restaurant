@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useBranches } from "../hooks/useBranches";
 import api from "../api/axios";
 import { toast } from "react-toastify";
+import { ExternalLink } from "lucide-react";
 
 const styles = {
     page: {
@@ -279,6 +280,42 @@ const styles = {
         textAlign: "center",
         gridColumn: "1 / -1",
     },
+    docLabel: {
+        fontSize: "0.85rem",
+        fontWeight: 800,
+        color: "#0F172A",
+        margin: "0 0 12px",
+    },
+    docList: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px",
+    },
+    docCard: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "12px 16px",
+        backgroundColor: "white",
+        borderRadius: "10px",
+        border: "1px solid #E2E8F0",
+        transition: "all 0.2s",
+    },
+    docName: {
+        fontSize: "0.85rem",
+        fontWeight: 700,
+        color: "#0F172A",
+    },
+    docViewBtn: {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        fontSize: "0.80rem",
+        fontWeight: 700,
+        color: "#3B82F6",
+        textDecoration: "none",
+        transition: "opacity 0.2s",
+    },
 };
 
 function InfoRow({ label, value, full = false }) {
@@ -286,6 +323,29 @@ function InfoRow({ label, value, full = false }) {
         <div style={full ? { ...styles.infoItem, gridColumn: "1 / -1" } : styles.infoItem}>
             <span style={styles.infoLabel}>{label}</span>
             <span style={styles.infoValue}>{value || "N/A"}</span>
+        </div>
+    );
+}
+
+function DocLink({ label, url }) {
+    if (!url) return null;
+
+    // Use absolute URL if it starts with http, otherwise prepend backend URL
+    const fullUrl = url.startsWith("http") ? url : `http://localhost:4000${url}`;
+
+    return (
+        <div style={styles.docCard}>
+            <span style={styles.docName}>{label}</span>
+            <a
+                href={fullUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.docViewBtn}
+                onMouseOver={(e) => e.currentTarget.style.opacity = "0.7"}
+                onMouseOut={(e) => e.currentTarget.style.opacity = "1"}
+            >
+                View <ExternalLink size={14} />
+            </a>
         </div>
     );
 }
@@ -354,8 +414,16 @@ export default function AdminPendingRequests() {
                                 {/* Card Header */}
                                 <div style={styles.cardHeader}>
                                     <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-                                        <div style={styles.avatar}>
-                                            {(store.manager?.name || "M")[0].toUpperCase()}
+                                        <div
+                                            style={{
+                                                ...styles.avatar,
+                                                backgroundImage: store.managerPhotoUrl ? `url(${store.managerPhotoUrl.startsWith('http') ? store.managerPhotoUrl : `http://localhost:4000${store.managerPhotoUrl}`})` : "none",
+                                                backgroundSize: "cover",
+                                                backgroundPosition: "center",
+                                                color: store.managerPhotoUrl ? "transparent" : "white"
+                                            }}
+                                        >
+                                            {!store.managerPhotoUrl && (store.manager?.name || "M")[0].toUpperCase()}
                                         </div>
                                         <div>
                                             <p style={styles.managerName}>{store.manager?.name || "Unknown Manager"}</p>
@@ -420,6 +488,16 @@ export default function AdminPendingRequests() {
                                                     <div style={styles.bankItemValue}>{store.bankAccountNumber || "N/A"}</div>
                                                 </div>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Documents */}
+                                    <div style={{ ...styles.section, border: "none", padding: "0" }}>
+                                        <div style={styles.docLabel}>Documents</div>
+                                        <div style={styles.docList}>
+                                            <DocLink label="FSSAI License" url={store.fssaiPdfUrl} />
+                                            <DocLink label="GST Certificate" url={store.gstPdfUrl} />
+                                            <DocLink label="Bank Passbook" url={store.bankPassbookPdfUrl} />
                                         </div>
                                     </div>
                                 </div>

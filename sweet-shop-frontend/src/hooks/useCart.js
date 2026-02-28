@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/axios";
+import useAuthStore from "../store/useAuthStore";
+
 
 export const cartKeys = {
     all: ["cart"],
@@ -7,12 +9,14 @@ export const cartKeys = {
 };
 
 export function useCart() {
+    const { isAuthenticated } = useAuthStore();
     return useQuery({
         queryKey: cartKeys.detail(),
         queryFn: async () => {
             const { data } = await api.get("/cart");
             return data;
         },
+        enabled: !!isAuthenticated,
         retry: 1
     });
 }

@@ -33,11 +33,11 @@ const sendConfirmationEmail = async (userEmail, userName) => {
         const transporter = await createTransporter();
 
         const info = await transporter.sendMail({
-            from: '"Sweet Shop Admin" <admin@sweetshop.com>',
+            from: '"Velvet Plate Admin" <admin@velvetplate.com>',
             to: userEmail,
             subject: "Your Manager Account has been Verified ✔",
-            text: `Hello ${userName},\n\nYour manager account has been verified by the admin. You can now log in to the Sweet Shop Management System.\n\nBest regards,\nSweet Shop Team`,
-            html: `<b>Hello ${userName},</b><br><br>Your manager account has been verified by the admin. You can now log in to the Sweet Shop Management System.<br><br>Best regards,<br>Sweet Shop Team`,
+            text: `Hello ${userName},\n\nYour manager account has been verified by the admin. You can now log in to the Velvet Plate Management System.\n\nBest regards,\nVelvet Plate Team`,
+            html: `<b>Hello ${userName},</b><br><br>Your manager account has been verified by the admin. You can now log in to the Velvet Plate Management System.<br><br>Best regards,<br>Velvet Plate Team`,
         });
 
         console.log("Message sent: %s", info.messageId);
@@ -69,7 +69,7 @@ async function sendStoreVerifiedEmail(managerEmail, managerName, storeName) {
                     <h1 style="text-align: center; color: #0f172a; font-size: 24px; margin-bottom: 16px;">Congratulations, ${managerName}!</h1>
                     <p style="text-align: center; color: #475569; font-size: 16px; line-height: 1.6;">
                         Your store <strong>"${storeName}"</strong> has been verified by our team. 
-                        You can now start taking orders and managing your restaurant through the FoodFlow Partner Dashboard.
+                        You can now start taking orders and managing your restaurant through the Velvet Plate Partner Dashboard.
                     </p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="http://localhost:5173/manager/dashboard" 
@@ -78,7 +78,7 @@ async function sendStoreVerifiedEmail(managerEmail, managerName, storeName) {
                         </a>
                     </div>
                     <p style="text-align: center; color: #94a3b8; font-size: 13px;">
-                        If you have any questions, contact us at partner@foodflow.com
+                        If you have any questions, contact us at partner@velvetplate.com
                     </p>
                 </div>
             `
@@ -97,7 +97,7 @@ async function sendStoreStatusChangeEmail(managerEmail, managerName, storeName, 
             pending: { emoji: '⏳', title: 'Store Status Changed', body: `Your store "${storeName}" status has been changed to pending. Please contact support if you have questions.` },
             under_review: { emoji: '🔍', title: 'Store Under Review', body: `Your store "${storeName}" is now under review. We'll notify you once the review is complete.` },
             verified: { emoji: '✅', title: 'Store Verified', body: `Your store "${storeName}" has been verified! You can now start operations.` },
-            rejected: { emoji: '❌', title: 'Application Rejected', body: `Unfortunately, your store application for "${storeName}" has not been approved at this time. Please contact our support team at partner@foodflow.com for more information or to address the concerns raised.` },
+            rejected: { emoji: '❌', title: 'Application Rejected', body: `Unfortunately, your store application for "${storeName}" has not been approved at this time. Please contact our support team at partner@velvetplate.com for more information or to address the concerns raised.` },
         };
         const msg = statusMessages[newStatus] || { emoji: '📋', title: 'Status Update', body: `Your store "${storeName}" status has been updated to: ${newStatus}` };
 
@@ -110,7 +110,7 @@ async function sendStoreStatusChangeEmail(managerEmail, managerName, storeName, 
                     <h2 style="color: #0f172a;">${msg.emoji} ${msg.title}</h2>
                     <p style="color: #475569; line-height: 1.6;">Hello ${managerName},</p>
                     <p style="color: #475569; line-height: 1.6;">${msg.body}</p>
-                    <p style="color: #94a3b8; font-size: 13px; margin-top: 30px;">— FoodFlow Partner Team</p>
+                    <p style="color: #94a3b8; font-size: 13px; margin-top: 30px;">— Velvet Plate Partner Team</p>
                 </div>
             `
         });

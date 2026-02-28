@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/axios";
+import useAuthStore from "../store/useAuthStore";
+
 
 export const branchesKeys = {
     all: ["branches"],
@@ -8,22 +10,26 @@ export const branchesKeys = {
 };
 
 export function useBranches() {
+    const { isAuthenticated } = useAuthStore();
     return useQuery({
         queryKey: branchesKeys.all,
         queryFn: async () => {
             const { data } = await api.get("/branches");
             return data;
         },
+        enabled: !!isAuthenticated,
     });
 }
 
 export function useMyBranch() {
+    const { isAuthenticated } = useAuthStore();
     return useQuery({
         queryKey: branchesKeys.mine,
         queryFn: async () => {
             const { data } = await api.get("/branches/my-branch");
             return data;
         },
+        enabled: !!isAuthenticated,
     });
 }
 

@@ -93,14 +93,6 @@ export default function Register() {
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
       >
         <div className="register-header">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-            className="register-icon-container"
-          >
-            <ShieldCheck size={28} color="#FF5A00" strokeWidth={2.5} />
-          </motion.div>
           <h2 className="register-title">Create Account</h2>
           <p className="register-subtitle">Join our premium restaurant ecosystem</p>
         </div>

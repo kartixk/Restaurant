@@ -1,35 +1,14 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
-// Ensure directories exist
-const uploadDirs = ['public/uploads/docs', 'public/uploads/profiles'];
-uploadDirs.forEach(dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-});
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        if (file.fieldname === 'managerPhoto') {
-            cb(null, 'public/uploads/profiles');
-        } else {
-            cb(null, 'public/uploads/docs');
-        }
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Store files in system temp directory temporarily before Cloudinary upload
+const storage = multer.diskStorage({});
 
 const fileFilter = (req, file, cb) => {
-    if (file.fieldname === 'managerPhoto') {
+    if (file.fieldname === 'managerPhoto' || file.fieldname === 'image' || file.fieldname === 'storeImage' || file.fieldname === 'licenseImage') {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
         } else {
-            cb(new Error('Only images are allowed for profile photos!'), false);
+            cb(new Error('Only images are allowed for photos!'), false);
         }
     } else {
         if (file.mimetype === 'application/pdf') {

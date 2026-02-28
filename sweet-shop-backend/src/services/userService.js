@@ -35,7 +35,7 @@ const loginUser = async (data) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-        throw new Error("Invalid credentials");
+        throw new Error("User not found");
     }
 
     if (!user.isVerified && user.role !== "MANAGER") {
