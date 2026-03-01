@@ -14,7 +14,8 @@ const logger = winston.createLogger({
                 winston.format.colorize(),
                 winston.format.simple()
             )
-        })
+        }),
+        new winston.transports.File({ filename: 'error.log', level: 'error' })
     ],
 });
 
