@@ -425,7 +425,7 @@ const S = {
         padding: "2.5rem 2rem", borderBottom: "1px solid #F1F5F9", textAlign: "center", background: "#FFFFFF"
     },
     logo: {
-        width: "64px", height: "64px", borderRadius: "16px", background: "#FFF7F5", border: "1px solid #FFD8CC",
+        width: "64px", height: "64px", borderRadius: "16px", backgroundColor: "#FFF7F5", border: "1px solid #FFD8CC",
         display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem auto",
         backgroundSize: 'cover', backgroundPosition: 'center'
     },
