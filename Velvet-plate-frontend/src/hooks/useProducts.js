@@ -60,3 +60,16 @@ export function useUpdateProductStock() {
         },
     });
 }
+
+export function useUpdateProductAvailability() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, isAvailable }) => {
+            const { data } = await api.patch(`/products/${id}/availability`, { isAvailable });
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: productsKeys.all });
+        },
+    });
+}

@@ -49,7 +49,7 @@ function App() {
 
       <Navbar />
       <CartDrawer />
-      <Suspense fallback={<div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", fontSize: "1.2rem", color: "#64748b" }}>Loading...</div>}>
+      <Suspense fallback={<div className="flex items-center justify-center h-screen text-lg font-black text-slate-400 bg-slate-50">Loading Velvet Plate...</div>}>
         <Routes>
           <Route path="/" element={<HomeGuard />} />
 

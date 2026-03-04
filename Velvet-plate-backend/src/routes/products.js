@@ -46,4 +46,10 @@ router.post(
   productController.restockProduct
 );
 
+router.patch(
+  "/:id/availability",
+  authMiddleware,
+  productController.updateAvailability
+);
+
 module.exports = router;

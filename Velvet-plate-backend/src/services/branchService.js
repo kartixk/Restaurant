@@ -1,5 +1,5 @@
 const prisma = require("../prismaClient");
-const { sendStoreVerifiedEmail, sendStoreStatusChangeEmail } = require("../utils/email");
+const { sendStoreVerifiedEmail, sendStoreStatusChangeEmail, sendOnboardingSubmissionEmail } = require("../utils/email");
 
 const createBranch = async (data) => {
     // data: { name, location, address, phone, managerId }
@@ -161,7 +161,7 @@ const onboardBranch = async (data) => {
     };
 
     // Use atomic upsert: create if no branch exists, update if one already does
-    return await prisma.branch.upsert({
+    const branch = await prisma.branch.upsert({
         where: { managerId: data.managerId },
         update: branchData,
         create: {
@@ -172,6 +172,13 @@ const onboardBranch = async (data) => {
             manager: { select: { id: true, name: true, email: true, phone: true } }
         }
     });
+
+    // Send onboarding submission acknowledgement
+    if (branch.manager?.email) {
+        sendOnboardingSubmissionEmail(branch.manager.email, branch.manager.name || 'Partner', branch.name);
+    }
+
+    return branch;
 };
 
 

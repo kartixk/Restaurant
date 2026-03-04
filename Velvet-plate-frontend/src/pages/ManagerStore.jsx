@@ -3,117 +3,113 @@ import React, { useState, useEffect } from "react";
 import ManagerLayout from "../components/ManagerLayout";
 import api from "../api/axios";
 import { toast } from "react-toastify";
-import { CheckCircle, StopCircle, Building, MapPin, Phone, FileText, CreditCard } from "lucide-react";
 
 export default function ManagerStore() {
     const [branch, setBranch] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [toggling, setToggling] = useState(false);
 
     useEffect(() => {
-        const fetchBranch = async () => {
-            try {
-                const res = await api.get("/branches/my-branch");
-                setBranch(res.data);
-            } catch (err) {
-                // Silently handle 404 for new managers
-                if (err.response?.status !== 404) {
-                    toast.error("Failed to load store settings");
-                }
-                setBranch(null);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchBranch();
+        api.get("/branches/my-branch").then(r => setBranch(r.data)).catch(() => { }).finally(() => setLoading(false));
     }, []);
 
-    const isVerified = branch?.storeStatus?.toLowerCase() === "verified";
     const handleToggleVisibility = async () => {
-        if (!branch?.id) return;
+        if (!branch) return;
+        setToggling(true);
         try {
-            const res = await api.put(`/branches/${branch.id}/visibility`, { isVisible: !branch.isVisible });
-            setBranch({ ...branch, isVisible: res.data.isVisible });
-            toast.success(`Store is now ${res.data.isVisible ? 'Visible' : 'Hidden'}`);
-        } catch (err) {
-            toast.error("Failed to toggle visibility");
-        }
+            await api.patch(`/branches/${branch.id}/visibility`, { isVisible: !branch.isVisible });
+            setBranch(p => ({ ...p, isVisible: !p.isVisible }));
+            toast.success(branch.isVisible ? "Store hidden from customers" : "Store is now visible");
+        } catch { toast.error("Failed to update visibility"); }
+        finally { setToggling(false); }
     };
 
-    // if (!branch) return null; // Removed to prevent blank screen
-
-    const S = {
-        card: { backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)", overflow: "hidden", marginBottom: '1.5rem' },
-        cardHeader: { padding: "1.25rem 1.5rem", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" },
-        cardTitle: { fontSize: "1.1rem", fontWeight: 600, color: "#0f172a", margin: 0 },
-        cardBody: { padding: "1.5rem" },
-        label: { fontSize: "0.875rem", fontWeight: 500, color: "#64748b", margin: '0 0 0.25rem 0' },
-        value: { fontSize: "0.95rem", fontWeight: 600, color: "#0f172a", margin: 0 },
-        grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" },
-        btnToggle: (active) => ({
-            padding: "0.75rem 1.5rem", borderRadius: "8px", fontWeight: 600, cursor: "pointer",
-            display: "flex", alignItems: "center", gap: "0.5rem", border: "1px solid",
-            backgroundColor: active ? "#ecfdf5" : "#fef2f2", color: active ? "#059669" : "#dc2626", borderColor: active ? "#10b981" : "#fca5a5"
-        })
-    };
+    const Field = ({ label, value }) => (
+        <div className="grid grid-cols-[160px,1fr] items-start py-3 border-b border-slate-50 last:border-0">
+            <span className="text-slate-500 text-sm font-medium">{label}</span>
+            <span className="font-semibold text-slate-900 text-sm">{value || "—"}</span>
+        </div>
+    );
 
     return (
-        <ManagerLayout title="My Store" subtitle="Configure your restaurant's profile and visibility.">
-            <div style={S.card}>
-                <div style={S.cardHeader}>
-                    <h3 style={S.cardTitle}>Visibility Status</h3>
-                    <span className={`manager-badge ${branch?.storeStatus === 'verified' ? 'manager-badge-success' : 'manager-badge-warning'}`}>
-                        {branch?.storeStatus?.toUpperCase() || 'UNKNOWN'}
-                    </span>
-                </div>
-                <div style={S.cardBody}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <p style={S.label}>Consumer Facing Visibility</p>
-                            <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Hide your store from the menu during emergencies or rush hours.</p>
-                        </div>
-                        <button onClick={handleToggleVisibility} style={S.btnToggle(branch?.isVisible)}>
-                            {branch?.isVisible ? <><CheckCircle size={18} /> Store Active</> : <><StopCircle size={18} /> Store Hidden</>}
+        <ManagerLayout>
+            <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+                <div className="flex justify-between items-end mb-10">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">My Store</h1>
+                        <p className="text-base text-slate-500 font-medium">Branch configuration and compliance overview.</p>
+                    </div>
+                    {branch?.storeStatus?.toLowerCase() === "verified" && (
+                        <button
+                            onClick={handleToggleVisibility}
+                            disabled={toggling}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold border cursor-pointer transition-all disabled:opacity-50 shadow-sm ${branch?.isVisible ? "bg-white border-slate-200 text-slate-900 hover:bg-slate-50" : "bg-[#FF5A00] border-[#FF5A00] text-white hover:opacity-90"}`}
+                        >
+                            {branch?.isVisible ? "Go Offline" : "Go Live →"}
                         </button>
-                    </div>
+                    )}
                 </div>
-            </div>
 
-            <div style={S.card}>
-                <div style={S.cardHeader}><h3 style={S.cardTitle}>Branch Information</h3></div>
-                <div style={S.cardBody}>
-                    <div style={S.grid2}>
-                        <div><p style={S.label}>Restaurant Name</p><p style={S.value}>{branch?.name || 'N/A'}</p></div>
-                        <div><p style={S.label}>Branch Area</p><p style={S.value}>{branch?.branchName || branch?.city || 'N/A'}</p></div>
-                        <div><p style={S.label}>Contact Phone</p><p style={S.value}>{branch?.phone || 'N/A'}</p></div>
-                        <div><p style={S.label}>Email Address</p><p style={S.value}>{branch?.managerEmail || 'N/A'}</p></div>
+                {loading ? (
+                    <div className="flex justify-center py-20 text-sm text-slate-400">Loading store data...</div>
+                ) : !branch ? (
+                    <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-20 flex flex-col items-center text-center">
+                        <p className="text-slate-400 font-medium">No branch data found. Complete your onboarding first.</p>
                     </div>
-                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0' }}>
-                        <p style={S.label}>Full Business Address</p>
-                        <p style={S.value}>{branch?.address || 'N/A'}, {branch?.city || ''}, {branch?.state || ''} {branch?.pincode || ''}</p>
-                    </div>
-                </div>
-            </div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Status Card */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-900 m-0">Store Status</h2>
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${branch?.isVisible && branch?.storeStatus?.toLowerCase() === "verified" ? "bg-emerald-500" : "bg-slate-400"}`} />
+                                    <div>
+                                        <div className="text-sm font-bold text-slate-900">{branch?.isVisible && branch?.storeStatus?.toLowerCase() === 'verified' ? 'Accepting Orders' : 'Offline'}</div>
+                                        <div className="text-xs text-slate-500 font-medium capitalize mt-0.5">Status: {branch?.storeStatus}</div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div>
+                                        <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Opens</div>
+                                        <div className="font-bold text-slate-900 text-sm">{branch?.openTime}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Closes</div>
+                                        <div className="font-bold text-slate-900 text-sm">{branch?.closeTime}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-            <div style={S.grid2}>
-                <div style={S.card}>
-                    <div style={S.cardHeader}><h3 style={S.cardTitle}>Legal & Compliance</h3></div>
-                    <div style={S.cardBody}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div><p style={S.label}>FSSAI License</p><p style={S.value}>{branch?.fssaiLicense || "N/A"}</p></div>
-                            <div><p style={S.label}>GST Number</p><p style={S.value}>{branch?.gstNumber || "N/A"}</p></div>
+                        {/* Branch Info */}
+                        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 flex flex-col shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-900 mb-4">Branch Details</h2>
+                            <Field label="Restaurant Name" value={branch?.name} />
+                            <Field label="Branch Name" value={branch?.branchName} />
+                            <Field label="Phone" value={branch?.phone} />
+                            <Field label="Address" value={branch?.address} />
+                            <Field label="City" value={branch?.city} />
+                            <Field label="State / Pincode" value={`${branch?.state || ""} ${branch?.pincode || ""}`} />
+                        </div>
+
+                        {/* Compliance */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-900 mb-4">Legal & Compliance</h2>
+                            <Field label="FSSAI License" value={branch?.fssaiLicense} />
+                            <Field label="GST Number" value={branch?.gstNumber} />
+                            <Field label="PAN Number" value={branch?.panNumber} />
+                        </div>
+
+                        {/* Bank */}
+                        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 flex flex-col shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-900 mb-4">Bank Account</h2>
+                            <Field label="Account Holder" value={branch?.bankAccountName} />
+                            <Field label="Account Number" value={branch?.bankAccountNumber ? `•••• ${branch.bankAccountNumber.slice(-4)}` : "—"} />
+                            <Field label="IFSC Code" value={branch?.bankIfscCode} />
                         </div>
                     </div>
-                </div>
-                <div style={S.card}>
-                    <div style={S.cardHeader}><h3 style={S.cardTitle}>Settlement Bank Account</h3></div>
-                    <div style={S.cardBody}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div><p style={S.label}>Account Holder</p><p style={S.value}>{branch?.bankAccountName || "N/A"}</p></div>
-                            <div><p style={S.label}>Account Number</p><p style={S.value}>•••• •••• {branch?.bankAccountNumber?.slice(-4) || "XXXX"}</p></div>
-                            <div><p style={S.label}>IFSC Code</p><p style={S.value}>{branch?.bankIfscCode || "N/A"}</p></div>
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
         </ManagerLayout>
     );

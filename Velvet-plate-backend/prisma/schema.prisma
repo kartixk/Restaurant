@@ -29,47 +29,48 @@ enum Role {
 }
 
 model Branch {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  name              String   @unique
-  branchName        String?
-  location          String?
-  address           String?
-  city              String?
-  state             String?
-  pincode           String?
-  phone             String?
-  
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  name       String  @unique
+  branchName String?
+  location   String?
+  address    String?
+  city       String?
+  state      String?
+  pincode    String?
+  phone      String?
+
   // New Manager Details
-  managerName       String?
-  managerPhone      String?
-  managerAddress    String?
-  managerCity       String?
-  managerState      String?
-  managerPincode    String?
-  panNumber         String?
-  aadharNumber      String?
-  
-  gstNumber         String
-  fssaiLicense      String?
-  bankAccountName   String?
-  bankAccountNumber String?
-  bankIfscCode      String?
-  openTime          String?
-  closeTime         String?
-  storeImageUrl     String?
-  licenseImageUrl   String?
-  fssaiPdfUrl       String?
-  gstPdfUrl         String?
+  managerName    String?
+  managerPhone   String?
+  managerAddress String?
+  managerCity    String?
+  managerState   String?
+  managerPincode String?
+  panNumber      String?
+  aadharNumber   String?
+
+  gstNumber          String
+  fssaiLicense       String?
+  bankAccountName    String?
+  bankAccountNumber  String?
+  bankIfscCode       String?
+  openTime           String?
+  closeTime          String?
+  storeImageUrl      String?
+  licenseImageUrl    String?
+  fssaiPdfUrl        String?
+  gstPdfUrl          String?
   bankPassbookPdfUrl String?
   managerPhotoUrl    String?
-  isVisible         Boolean  @default(false)
-  storeStatus       String   @default("pending") // pending, under_review, verified, rejected
-  manager           User     @relation("BranchManager", fields: [managerId], references: [id])
-  managerId         String   @unique @db.ObjectId
-  products          Product[]
-  orders            Order[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  isVisible          Boolean   @default(false)
+  storeStatus        String    @default("pending") // pending, under_review, verified, rejected
+  manager            User      @relation("BranchManager", fields: [managerId], references: [id])
+  managerId          String    @unique @db.ObjectId
+  products           Product[]
+  orders             Order[]
+  branchStatuses     BranchItemStatus[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model Product {
@@ -78,15 +79,29 @@ model Product {
   description String?
   price       Float
   category    String
+  dietType    String?
   isAvailable Boolean  @default(true)
   imageUrl    String
-  branchId    String   @db.ObjectId
-  branch      Branch   @relation(fields: [branchId], references: [id])
+  branchId    String?  @db.ObjectId
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  branchStatuses BranchItemStatus[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([category])
   @@index([branchId])
+}
+
+model BranchItemStatus {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  branchId    String   @db.ObjectId
+  productId   String   @db.ObjectId
+  isAvailable Boolean  @default(true)
+  
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([branchId, productId])
 }
 
 model Cart {

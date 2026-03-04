@@ -40,16 +40,16 @@ const Icons = {
 };
 
 // ─── STAT CARD ───────────────────────────────────────────────────────────────
-function StatCard({ label, value, trend, isPositive, styles }) {
-  const S = styles;
+function StatCard({ label, value, trend, isPositive }) {
   return (
-    <div style={S.statCard}>
-      <div style={S.statHeader}>
-        <span style={S.statLabel}>{label}</span>
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm box-border">
+      <div className="flex justify-between items-center">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{label}</span>
       </div>
-      <div style={S.statValue}>{value}</div>
+      <div className="text-4xl font-extrabold text-slate-900 tracking-tighter leading-none">{value}</div>
       {trend && (
-        <div style={{ ...S.trendBadge, color: isPositive ? "#059669" : "#dc2626", backgroundColor: isPositive ? "#ecfdf5" : "#fef2f2" }}>
+        <div className={`text-xs font-bold px-2.5 py-1 rounded-md inline-flex items-center w-fit ${isPositive ? "text-emerald-600 bg-emerald-50" : "text-red-600 bg-red-50"
+          }`}>
           {isPositive ? '↑' : '↓'} {trend}
         </div>
       )}
@@ -59,19 +59,38 @@ function StatCard({ label, value, trend, isPositive, styles }) {
 
 // ─── STATUS BADGE ────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
-  const statusStyles = {
-    active: { bg: "#ecfdf5", color: "#047857", border: "1px solid #10b98133" },
-    inactive: { bg: "#f8fafc", color: "#64748b", border: "1px solid #cbd5e1" },
-    pending: { bg: "#fffbeb", color: "#b45309", border: "1px solid #f59e0b33" }
+  const statusClasses = {
+    active: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    inactive: "bg-slate-50 text-slate-500 border-slate-200",
+    pending: "bg-amber-50 text-amber-700 border-amber-200"
   };
-  const s = statusStyles[status?.toLowerCase()] || statusStyles.inactive;
+  const cls = statusClasses[status?.toLowerCase()] || statusClasses.inactive;
   return (
-    <span style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 600, backgroundColor: s.bg, color: s.color, border: s.border, textTransform: "capitalize" }}>
+    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${cls}`}>
       {status || 'Unknown'}
     </span>
   );
 }
 
+// ─── DOC VIEWER STYLES & COMPONENTS ──────────────────────────────────────────
+function DocLink({ label, url, onPreview }) {
+  if (!url) return null;
+
+  const fullUrl = url.startsWith("http") ? url : `http://localhost:4000${url}`;
+
+  return (
+    <div className="flex justify-between items-center p-3 px-4 bg-white rounded-xl border border-slate-200 transition-all">
+      <span className="text-sm font-bold text-slate-900">{label}</span>
+      <button
+        onClick={() => onPreview({ label, url: fullUrl })}
+        className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:opacity-70 transition-opacity bg-none border-none cursor-pointer p-0"
+      >
+        View
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </button>
+    </div>
+  );
+}
 
 // ─── MAIN ADMIN COMPONENT ───────────────────────────────────────────────────
 export default function Admin() {
@@ -96,7 +115,10 @@ export default function Admin() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("adminDarkMode") === "true");
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const S = useMemo(() => getStyles(isDarkMode), [isDarkMode]);
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
+  const [branchFilterStatus, setBranchFilterStatus] = useState("All");
+  // const S = useMemo(() => getStyles(isDarkMode), [isDarkMode]);
 
   // Close notification dropdown when clicking outside
   const notificationsRef = useRef(null);
@@ -116,7 +138,7 @@ export default function Admin() {
   const { data: products = [], error: productsError } = useProducts(selectedBranchId);
 
   // Forms & State
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "Main Course", quantity: "", imageUrl: "", branchId: "" });
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "Main Course", dietType: "Veg", imageUrl: "", branchId: "" });
   const [stockInputs, setStockInputs] = useState({});
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryCategory, setInventoryCategory] = useState("All");
@@ -131,7 +153,7 @@ export default function Admin() {
   const deleteProductMutation = useDeleteProduct();
   const updateStockMutation = useUpdateProductStock();
 
-  const categories = ["Appetizers", "Main Course", "Desserts", "Beverages", "Sides", "Specials"];
+  const categories = ["Starters", "Main Course", "Desserts", "Beverages", "Specials", "Breads/Rotis"];
 
   useEffect(() => {
     if (!isAuthenticated || (role !== "ADMIN" && role !== "MANAGER")) {
@@ -194,7 +216,10 @@ export default function Admin() {
     return {
       id: b.id, name: b.name, location: b.location,
       managerName: b.manager?.name, managerEmail: b.manager?.email, managerPhone: b.manager?.phone || "+91 9999999999",
-      status: b.storeStatus?.toLowerCase() === 'verified' ? (b.isVisible ? 'active' : 'paused') : 'inactive',
+      status: b.storeStatus?.toLowerCase() === 'verified' ? (b.isVisible ? 'active' : 'paused') :
+        (b.storeStatus?.toLowerCase() === 'under_review' || b.storeStatus?.toLowerCase() === 'pending' ? 'pending' :
+          b.storeStatus?.toLowerCase() === 'rejected' ? 'rejected' : 'inactive'),
+      rawStatus: b.storeStatus,
       revenue: branchRevenue,
       isVisible: b.isVisible
     };
@@ -215,8 +240,8 @@ export default function Admin() {
   }, [salesList]);
 
   const pieData = [
-    { name: 'Dine-in', value: 45, color: S.pageTitle.color },
-    { name: 'Takeaway', value: 20, color: S.pageSubtitle.color },
+    { name: 'Dine-in', value: 45, color: '#FF5A00' },
+    { name: 'Takeaway', value: 20, color: '#10b981' },
   ];
 
   // Logic handlers
@@ -237,8 +262,8 @@ export default function Admin() {
   const handleAddProduct = (e) => {
     e.preventDefault();
     const name = newProduct.name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-    addProductMutation.mutate({ ...newProduct, name, branchId: selectedBranchId }, {
-      onSuccess: () => { toast.success(`"${name}" added!`); setNewProduct({ name: "", price: "", category: "Main Course", quantity: "", imageUrl: "", branchId: "" }); },
+    addProductMutation.mutate({ ...newProduct, name, branchId: newProduct.branchId === "" ? null : newProduct.branchId }, {
+      onSuccess: () => { toast.success(`"${name}" added!`); setNewProduct({ name: "", price: "", category: "Main Course", dietType: "Veg", imageUrl: "", branchId: "" }); },
       onError: (err) => handleApiError(err, "Failed to add product")
     });
   };
@@ -253,62 +278,67 @@ export default function Admin() {
   // ─── RENDERERS ─────────────────────────────────────────────────────────────
 
   const renderDashboardGlobal = () => (
-    <div style={S.mainContent}>
-      <div style={S.headerRow}>
+    <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+      <div className="flex justify-between items-end mb-10">
         <div>
-          <h1 style={S.pageTitle}>Dashboard overview</h1>
-          <p style={S.pageSubtitle}>System-wide aggregate performance metrics.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Dashboard overview</h1>
+          <p className="text-base text-slate-500 font-medium">System-wide aggregate performance metrics.</p>
         </div>
       </div>
 
-      <div style={S.statsGrid}>
-        <StatCard styles={S} label="Total Revenue" value={formatCurrency(reportSummary.totalAmount)} />
-        <StatCard styles={S} label="Active Branches" value={activeBranchesCount} />
-        <StatCard styles={S} label="Total Orders" value={reportSummary.count} />
-        <StatCard styles={S} label="Avg. Order Value" value={reportSummary.count > 0 ? formatCurrency(reportSummary.totalAmount / reportSummary.count) : formatCurrency(0)} />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6 mb-12">
+        <StatCard label="Total Revenue" value={formatCurrency(reportSummary.totalAmount)} />
+        <StatCard label="Active Branches" value={activeBranchesCount} />
+        <StatCard label="Total Orders" value={reportSummary.count} />
+        <StatCard label="Avg. Order Value" value={reportSummary.count > 0 ? formatCurrency(reportSummary.totalAmount / reportSummary.count) : formatCurrency(0)} />
       </div>
 
-      <div style={S.chartGrid}>
-        <div style={{ ...S.card, gridColumn: "span 2" }}>
-          <div style={S.cardHeader}><h2 style={S.cardTitle}>Revenue Last 30 Days</h2></div>
-          <div style={{ padding: "0 1.5rem 1.5rem 1.5rem" }}>
-            <div style={{ height: 300, minWidth: 0 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm box-border lg:col-span-2">
+          <div className="p-6 border-b border-slate-50 box-border">
+            <h2 className="text-lg font-bold text-slate-900 m-0">Revenue Last 30 Days</h2>
+          </div>
+          <div className="px-6 pb-6 box-border">
+            <div className="h-[300px] min-w-0">
               <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <LineChart data={revenueChartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: S.pageSubtitle.color, fontSize: 12 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: S.pageSubtitle.color, fontSize: 12 }} tickFormatter={(v) => `₹${v / 1000}k`} dx={-10} />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 12 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 12 }} tickFormatter={(v) => `₹${v / 1000}k`} dx={-10} />
                   <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => formatCurrency(value)} />
-                  <Line type="monotone" dataKey="revenue" stroke={S.pageTitle.color} strokeWidth={3} dot={false} activeDot={{ r: 6, fill: S.pageTitle.color, stroke: isDarkMode ? '#1e293b' : '#fff', strokeWidth: 2 }} />
+                  <Line type="monotone" dataKey="revenue" stroke="#FF5A00" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: "#FF5A00", stroke: isDarkMode ? '#1e293b' : '#fff', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        <div style={S.card}>
-          <div style={S.cardHeader}><h2 style={S.cardTitle}>Top Branches</h2></div>
-          <div style={{ padding: "1rem" }}>
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm box-border">
+          <div className="p-6 border-b border-slate-50 box-border">
+            <h2 className="text-lg font-bold text-slate-900 m-0">Top Branches</h2>
+          </div>
+          <div className="p-4">
             {displayBranches.length === 0 ? (
-              <div style={S.emptyState}>No branches to rank</div>
+              <div className="py-20 flex flex-col items-center justify-center gap-4 text-slate-500 text-base text-center font-medium">No branches to rank</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-4">
                 {displayBranches
                   .filter(b => b.status === 'active' || b.status === 'paused')
                   .sort((a, b) => b.revenue - a.revenue)
                   .slice(0, 5)
                   .map((b, i) => (
-                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: i === 0 ? '#fef3c7' : '#f1f5f9', color: i === 0 ? '#b45309' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <div key={b.id} className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${i === 0 ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-500"
+                          }`}>
                           {i + 1}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 500, color: S.pageTitle.color, fontSize: '0.875rem' }}>{b.name}</div>
-                          <div style={{ color: S.pageSubtitle.color, fontSize: '0.75rem' }}>{b.location}</div>
+                          <div className="font-semibold text-slate-900 text-sm">{b.name}</div>
+                          <div className="text-slate-500 text-[10px] font-medium leading-none mt-0.5">{b.location}</div>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 600, color: S.pageTitle.color, fontSize: '0.875rem' }}>{formatCurrency(b.revenue)}</div>
+                      <div className="font-bold text-slate-900 text-sm">{formatCurrency(b.revenue)}</div>
                     </div>
                   ))}
               </div>
@@ -321,72 +351,112 @@ export default function Admin() {
 
   // ─── 1. RESTAURANT FLEET DASHBOARD (List View) ─────────────────────────────
   const renderBranchesList = () => {
-    // Role-Based Filtering: Admins see all, Managers see only their assigned branches
-    // Additionally filter to only show 'active' (verified) branches in the main list
     const authorizedBranches = (role === "ADMIN"
       ? displayBranches
       : displayBranches.filter(b => b.managerEmail === user?.email)
-    ).filter(b => b.status === 'active' || b.status === 'paused');
+    );
+
+    const filteredBranches = authorizedBranches.filter(b => {
+      if (branchFilterStatus === "All") return true;
+      if (branchFilterStatus === "Active") return b.status === "active";
+      if (branchFilterStatus === "Paused") return b.status === "paused";
+      if (branchFilterStatus === "Pending") return b.status === "pending";
+      return true;
+    });
+
+    const statusCounts = {
+      All: authorizedBranches.length,
+      Active: authorizedBranches.filter(b => b.status === "active").length,
+      Paused: authorizedBranches.filter(b => b.status === "paused").length,
+      Pending: authorizedBranches.filter(b => b.status === "pending").length,
+    };
 
     return (
-      <div style={S.mainContent}>
-        <div style={S.headerRow}>
+      <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+        <div className="flex justify-between items-end mb-10">
           <div>
-            <h1 style={S.pageTitle}>{role === "ADMIN" ? "Restaurant Fleet" : "My Restaurant"}</h1>
-            <p style={S.pageSubtitle}>
+            <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">{role === "ADMIN" ? "Restaurant Fleet" : "My Restaurant"}</h1>
+            <p className="text-base text-slate-500 font-medium">
               {role === "ADMIN" ? "Monitor live status and revenue across all locations." : "Manage your specific location's performance and menu."}
             </p>
           </div>
-          {/* The "+ Onboard New Store" button has been completely removed as requested */}
+          {role === "ADMIN" && (
+            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1">
+              {Object.keys(statusCounts).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setBranchFilterStatus(status)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border-none cursor-pointer flex items-center gap-2 ${branchFilterStatus === status
+                    ? "bg-white text-[#FF5A00] shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                    }`}
+                >
+                  {status}
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${branchFilterStatus === status ? "bg-orange-50 text-[#FF5A00]" : "bg-slate-200 text-slate-600"
+                    }`}>
+                    {statusCounts[status]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {authorizedBranches.length === 0 ? (
-          <div style={S.emptyState}>
+        {filteredBranches.length === 0 ? (
+          <div className="p-20 flex flex-col items-center justify-center gap-4 text-slate-500 text-base text-center font-medium">
             <Icons.Branches />
-            <h3>No Restaurants Assigned</h3>
-            <p>You currently do not have any active stores under your control.</p>
+            <h3 className="text-lg font-bold text-slate-900 m-0">No Restaurants Found</h3>
+            <p>No restaurants match the selected status filter.</p>
           </div>
         ) : (
-          <div style={S.storeGrid}>
-            {authorizedBranches.map(branch => (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-6">
+            {filteredBranches.map(branch => (
               <motion.div
                 key={branch.id}
-                style={S.storeCard}
+                className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-6 shadow-sm cursor-pointer"
                 whileHover={{ y: -4, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
                 transition={{ duration: 0.2 }}
+                onClick={() => setSelectedBranchId(branch.id)}
               >
-                <div style={S.storeCardHeader}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={S.storeIcon}>🍔</div>
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-[#FFF7F5] border border-[#FFD8CC] flex items-center justify-center text-2xl flex-shrink-0">🍔</div>
                     <div>
-                      <h3 style={S.storeName}>{branch.name}</h3>
-                      <p style={S.storeLocation}>{branch.location}</p>
+                      <h3 className="text-[1.1rem] font-extrabold text-slate-900 mb-1 tracking-tight">{branch.name}</h3>
+                      <p className="text-[0.85rem] text-slate-500 m-0">{branch.location}</p>
                     </div>
                   </div>
-                  <div style={branch.status === 'active' ? S.statusBadgeLive : (branch.status === 'paused' ? { ...S.statusBadgeOffline, color: '#94a3b8', backgroundColor: '#f1f5f9' } : S.statusBadgeOffline)}>
-                    <span style={{ ...S.statusDot, backgroundColor: branch.status === 'active' ? '#10b981' : '#94a3b8' }}></span>
-                    {branch.status === 'active' ? 'Accepting Orders' : (branch.status === 'paused' ? 'Inactive' : 'Offline')}
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.75rem] font-bold border ${branch.status === 'active' ? "bg-emerald-50 border-emerald-100 text-emerald-600" :
+                    branch.status === 'paused' ? "bg-slate-50 border-slate-200 text-slate-400" :
+                      branch.status === 'pending' ? "bg-amber-50 border-amber-200 text-amber-600" :
+                        "bg-slate-50 border-slate-200 text-slate-500"
+                    }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${branch.status === 'active' ? "bg-emerald-500" :
+                      branch.status === 'pending' ? "bg-amber-500" :
+                        "bg-slate-400"
+                      }`}></span>
+                    {branch.status === 'active' ? 'Accepting Orders' :
+                      branch.status === 'paused' ? 'Inactive' :
+                        branch.status === 'pending' ? 'Pending Review' :
+                          'Offline'}
                   </div>
                 </div>
 
-                <div style={S.storeMetrics}>
-                  <div style={S.metricBox}>
-                    <span style={S.metricLabel}>Today's Rev</span>
-                    <span style={S.metricValue}>{formatCurrency(branch.revenue || 0)}</span>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[0.75rem] text-slate-500 font-bold uppercase tracking-wider">Today's Rev</span>
+                    <span className="text-[1.1rem] text-slate-900 font-extrabold">{formatCurrency(branch.revenue || 0)}</span>
                   </div>
-                  <div style={S.metricBox}>
-                    <span style={S.metricLabel}>Manager</span>
-                    <span style={{ ...S.metricValue, fontSize: '0.9rem', color: '#475569' }}>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[0.75rem] text-slate-500 font-bold uppercase tracking-wider">Manager</span>
+                    <span className="text-[0.9rem] text-slate-600 font-extrabold">
                       {branch.managerName ? branch.managerName.split(' ')[0] : 'Unassigned'}
                     </span>
                   </div>
                 </div>
 
-                <div style={S.storeActions}>
-                  <button
-                    onClick={() => setSelectedBranchId(branch.id)}
-                    style={S.actionBtnBlue}
-                  >
+                <div className="mt-auto">
+                  <button className="w-full py-2.5 rounded-lg text-[0.9rem] font-bold text-white bg-slate-900 border-none cursor-pointer transition-colors hover:bg-slate-800">
                     Enter Command Center →
                   </button>
                 </div>
@@ -404,46 +474,39 @@ export default function Admin() {
     if (!branch) return null;
 
     return (
-      <div style={S.mainContent}>
-        <button onClick={() => setSelectedBranchId("")} style={S.linkBtn}>← Back to Fleet Dashboard</button>
+      <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+        <button onClick={() => setSelectedBranchId("")} className="bg-none border-none text-[#FF5A00] text-[0.9rem] font-bold cursor-pointer p-0 mb-4 inline-flex items-center transition-all hover:opacity-80">← Back to Fleet Dashboard</button>
 
-        <div style={S.commandHeader}>
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <div style={S.commandIcon}>🏢</div>
+        <div className="flex justify-between items-start mt-6 mb-10 pb-8 border-b border-slate-200">
+          <div className="flex gap-6 items-center">
+            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-[2rem] shadow-sm">🏢</div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '4px' }}>
-                <h1 style={S.pageTitle}>{branch.name}</h1>
-                <div style={branch.status === 'active' ? S.statusBadgeLive : (branch.status === 'paused' ? { ...S.statusBadgeOffline, color: '#94a3b8', backgroundColor: '#f1f5f9' } : S.statusBadgeOffline)}>
-                  <span style={{ ...S.statusDot, backgroundColor: branch.status === 'active' ? '#10b981' : '#94a3b8' }}></span>
+              <div className="flex items-center gap-4 mb-1">
+                <h1 className="text-3xl font-extrabold text-slate-900 m-0 tracking-tight">{branch.name}</h1>
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.75rem] font-bold border ${branch.status === 'active' ? "bg-emerald-50 border-emerald-100 text-emerald-600" :
+                  branch.status === 'paused' ? "bg-slate-50 border-slate-200 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${branch.status === 'active' ? "bg-emerald-500" : "bg-slate-400"}`}></span>
                   {branch.status === 'active' ? 'Live' : (branch.status === 'paused' ? 'Inactive' : 'Offline')}
                 </div>
               </div>
-              <p style={{ ...S.pageSubtitle, display: 'flex', gap: '1.5rem' }}>
-                <span>📍 {branch.location}</span>
-                <span>📋 MGR: {branch.managerName || 'Pending Assignment'}</span>
+              <p className="text-base text-slate-500 m-0 flex gap-6">
+                <span className="font-medium">📍 {branch.location}</span>
+                <span className="font-medium">📋 MGR: {branch.managerName || 'Pending Assignment'}</span>
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="flex gap-3">
             <button
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: '1px solid #E2E8F0',
-                backgroundColor: '#FFFFFF',
-                color: '#0F172A',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)'
-              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-blue-600 text-[0.875rem] font-bold cursor-pointer transition-all duration-200 shadow-sm hover:bg-blue-50 hover:border-blue-200"
+              onClick={() => setIsDocsModalOpen(true)}
+            >
+              <Icons.Menu />
+              View Documents
+            </button>
+            <button
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 text-[0.875rem] font-bold cursor-pointer transition-all duration-200 shadow-sm hover:bg-slate-50 hover:border-slate-300"
               onClick={() => setIsSettingsModalOpen(true)}
-              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
-              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
             >
               <Icons.Settings />
               Store Settings
@@ -451,47 +514,54 @@ export default function Admin() {
           </div>
         </div>
 
-        <div style={S.tabs}>
-          {[["overview", "Live Performance"]].map(([key, label]) => (
-            <button key={key} onClick={() => setActiveBranchTab(key)} style={{ ...S.tabBtn, ...(activeBranchTab === key ? S.tabBtnActive : {}) }}>{label}</button>
+        <div className="flex gap-8 border-b border-slate-200 mb-8">
+          {[["overview", "Live Performance"], ["menu", "Menu Configuration"]].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setActiveBranchTab(key)}
+              className={`pb-4 border-b-2 bg-none text-[0.95rem] font-semibold cursor-pointer transition-all ${activeBranchTab === key ? "text-[#FF5A00] border-[#FF5A00]" : "text-slate-500 border-transparent hover:text-slate-700"
+                }`}
+            >
+              {label}
+            </button>
           ))}
         </div>
 
         {activeBranchTab === "overview" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             {/* Real-time KPIs */}
-            <div style={S.statsGrid}>
-              <StatCard styles={S} label="Revenue (MTD)" value={formatCurrency(reportSummary.totalAmount)} trend="+12.4%" isPositive={true} />
-              <StatCard styles={S} label="Total Orders" value={reportSummary.count} trend="Stable" isPositive={true} />
-              <StatCard styles={S} label="Avg. Ticket Size" value={formatCurrency(reportSummary.totalAmount / (reportSummary.count || 1))} />
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6 mb-12">
+              <StatCard label="Revenue (MTD)" value={formatCurrency(reportSummary.totalAmount)} trend="+12.4%" isPositive={true} />
+              <StatCard label="Total Orders" value={reportSummary.count} trend="Stable" isPositive={true} />
+              <StatCard label="Avg. Ticket Size" value={formatCurrency(reportSummary.totalAmount / (reportSummary.count || 1))} />
             </div>
 
             {/* Manager Details Card */}
-            <div style={{ ...S.card, padding: '1.5rem', marginBottom: '2rem' }}>
-              <h3 style={S.cardTitle}>Assigned Leadership</h3>
-              <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col shadow-sm mb-8">
+              <h3 className="text-lg font-bold text-slate-900 m-0">Assigned Leadership</h3>
+              <div className="mt-4 flex items-center gap-4">
                 {branch.managerName ? (
                   <>
-                    <div style={S.avatarBtnLg}><Icons.User /></div>
+                    <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 flex items-center justify-center font-bold text-lg"><Icons.User /></div>
                     <div>
-                      <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '1.1rem' }}>{branch.managerName}</div>
-                      <div style={{ color: '#64748B', fontSize: '0.9rem', display: 'flex', gap: '1rem', marginTop: '4px' }}>
+                      <div className="font-extrabold text-slate-900 text-[1.1rem]">{branch.managerName}</div>
+                      <div className="text-slate-500 text-[0.9rem] flex gap-4 mt-1 font-medium">
                         <span>✉️ {branch.managerEmail}</span>
                         <span>📞 {branch.managerPhone}</span>
                       </div>
                     </div>
                   </>
                 ) : (
-                  <p style={{ color: '#64748B' }}>No manager currently assigned to this location.</p>
+                  <p className="text-slate-500 font-medium">No manager currently assigned to this location.</p>
                 )}
               </div>
             </div>
 
             {/* Charts Area */}
-            <div style={S.chartGrid}>
-              <div style={{ ...S.card, gridColumn: "span 2" }}>
-                <div style={S.cardHeader}><h2 style={S.cardTitle}>30-Day Order Volume</h2></div>
-                <div style={{ height: 300, padding: "1.5rem" }}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm lg:col-span-2">
+                <div className="p-6 border-b border-slate-50 font-bold"><h2 className="text-lg text-slate-900 m-0">30-Day Order Volume</h2></div>
+                <div className="h-[300px] p-6">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={revenueChartData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -504,9 +574,9 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div style={S.card}>
-                <div style={S.cardHeader}><h2 style={S.cardTitle}>Dine-in vs Takeaway</h2></div>
-                <div style={{ height: 300, padding: "1rem" }}>
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm">
+                <div className="p-6 border-b border-slate-50 font-bold"><h2 className="text-lg text-slate-900 m-0">Dine-in vs Takeaway</h2></div>
+                <div className="h-[300px] p-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={4} dataKey="value">
@@ -522,11 +592,101 @@ export default function Admin() {
           </motion.div>
         )}
 
+        {activeBranchTab === "menu" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mt-6">
+            <ProductInventoryList
+              categories={categories}
+              inventoryCategory={inventoryCategory}
+              setInventoryCategory={setInventoryCategory}
+              inventorySearch={inventorySearch}
+              setInventorySearch={setInventorySearch}
+              filteredInventory={filteredInventory}
+              stockInputs={stockInputs}
+              handleStockInputChange={handleStockInputChange}
+              adjustStock={adjustStock}
+              saveStockUpdate={saveStockUpdate}
+              handleDeleteProduct={handleDeleteProduct}
+            />
+          </motion.div>
+        )}
+
         <BranchSettingsModal
           isOpen={isSettingsModalOpen}
           onClose={() => setIsSettingsModalOpen(false)}
           branch={dbBranches.find(b => b.id === selectedBranchId)}
         />
+
+        {/* Documents Modal */}
+        {isDocsModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-[4px] z-[100] flex items-center justify-center p-6" onClick={() => setIsDocsModalOpen(false)}>
+            <div className="bg-white rounded-2xl w-full max-w-[800px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="p-4 px-6 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
+                <h3 className="text-lg font-bold text-slate-900 m-0">Store Documents</h3>
+                <button
+                  className="bg-none border-none text-slate-400 cursor-pointer p-1.5 flex items-center justify-center rounded-lg transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  onClick={() => setIsDocsModalOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex justify-center items-center min-h-[400px] bg-slate-50">
+                <div className="flex flex-col gap-4 w-full max-w-[400px]">
+                  <DocLink
+                    label="FSSAI License"
+                    url={dbBranches.find(b => b.id === selectedBranchId)?.fssaiPdfUrl}
+                    onPreview={setSelectedDoc}
+                  />
+                  <DocLink
+                    label="GST Certificate"
+                    url={dbBranches.find(b => b.id === selectedBranchId)?.gstPdfUrl}
+                    onPreview={setSelectedDoc}
+                  />
+                  <DocLink
+                    label="Bank Passbook"
+                    url={dbBranches.find(b => b.id === selectedBranchId)?.bankPassbookPdfUrl}
+                    onPreview={setSelectedDoc}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Document Preview Modal Component */}
+        {selectedDoc && (
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-[4px] z-[120] flex items-center justify-center p-6" onClick={() => setSelectedDoc(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-[800px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="p-4 px-6 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
+                <h3 className="text-lg font-bold text-slate-900 m-0">{selectedDoc.label}</h3>
+                <button
+                  className="bg-none border-none text-slate-400 cursor-pointer p-1.5 flex items-center justify-center rounded-lg transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  onClick={() => setSelectedDoc(null)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex justify-center items-center min-h-[400px] bg-slate-50">
+                {selectedDoc.url.toLowerCase().endsWith('.pdf') ? (
+                  <iframe
+                    src={`${selectedDoc.url}#toolbar=0&navpanes=0&scrollbar=0`}
+                    title={selectedDoc.label}
+                    className="w-full h-[500px] border-none rounded-lg bg-white shadow-sm"
+                  />
+                ) : (
+                  <img
+                    src={selectedDoc.url}
+                    alt={selectedDoc.label}
+                    className="max-w-full max-h-[70vh] rounded-lg object-contain shadow-sm"
+                    onError={(e) => {
+                      e.target.src = 'https://placehold.co/600x400/f8fafc/64748b?text=Preview+Not+Supported';
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     );
   };
@@ -570,50 +730,53 @@ export default function Admin() {
     ];
 
     return (
-      <div style={S.mainContent}>
-        <div style={S.headerRow}>
+      <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+        <div className="flex justify-between items-end mb-10">
           <div>
-            <h1 style={S.pageTitle}>Financial Reports</h1>
-            <p style={S.pageSubtitle}>Profit & Loss, Tax liabilities, and item performance.</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Financial Reports</h1>
+            <p className="text-base text-slate-500 font-medium">Profit & Loss, Tax liabilities, and item performance.</p>
           </div>
-          <button style={S.downloadButton} onClick={() => toast.success("Exporting P&L Statement...")}>
+          <button
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-orange-50 border border-orange-100 text-[#FF5A00] text-[0.9rem] font-bold cursor-pointer transition-all hover:bg-orange-100 shadow-sm"
+            onClick={() => toast.success("Exporting P&L Statement...")}
+          >
             📥 Export Tax Report (CSV)
           </button>
         </div>
 
         {/* TOP LEVEL KPIs */}
-        <div style={S.statsGrid}>
-          <div style={S.statCard}>
-            <div style={S.statHeader}><span style={S.statLabel}>Gross Revenue (Incl GST)</span></div>
-            <div style={S.statValue}>{formatCurrency(grossRevenue)}</div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6 mb-12">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col shadow-sm">
+            <div className="flex justify-between items-center mb-4"><span className="text-[0.8rem] text-slate-500 font-bold uppercase tracking-wider">Gross Revenue (Incl GST)</span></div>
+            <div className="text-[1.75rem] text-slate-900 font-extrabold tracking-tight">{formatCurrency(grossRevenue)}</div>
           </div>
-          <div style={S.statCard}>
-            <div style={S.statHeader}>
-              <span style={S.statLabel}>GST Liability (5%)</span>
-              <span style={{ fontSize: '0.7rem', background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, color: '#64748B' }}>TAX</span>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-[0.8rem] text-slate-500 font-bold uppercase tracking-wider">GST Liability (5%)</span>
+              <span className="text-[0.7rem] bg-slate-100 px-1.5 py-0.5 rounded font-bold text-slate-500">TAX</span>
             </div>
-            <div style={{ ...S.statValue, color: '#64748B' }}>{formatCurrency(gstCollected)}</div>
+            <div className="text-[1.75rem] text-slate-500 font-extrabold tracking-tight">{formatCurrency(gstCollected)}</div>
           </div>
-          <div style={S.statCard}>
-            <div style={S.statHeader}><span style={S.statLabel}>Net Sales</span></div>
-            <div style={S.statValue}>{formatCurrency(netSales)}</div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col shadow-sm">
+            <div className="flex justify-between items-center mb-4"><span className="text-[0.8rem] text-slate-500 font-bold uppercase tracking-wider">Net Sales</span></div>
+            <div className="text-[1.75rem] text-slate-900 font-extrabold tracking-tight">{formatCurrency(netSales)}</div>
           </div>
-          <div style={{ ...S.statCard, border: '1px solid #10B981', background: '#F0FDF4', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.1)' }}>
-            <div style={S.statHeader}><span style={{ ...S.statLabel, color: '#16A34A' }}>Est. Net Profit</span></div>
-            <div style={{ ...S.statValue, color: '#16A34A' }}>{formatCurrency(netProfit)}</div>
-            <div style={{ fontSize: '0.85rem', color: '#16A34A', fontWeight: 800, marginTop: '4px' }}>{profitMargin}% Margin</div>
+          <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-6 flex flex-col shadow-[0_4px_10px_rgba(16,185,129,0.1)]">
+            <div className="flex justify-between items-center mb-4"><span className="text-[0.8rem] text-emerald-600 font-bold uppercase tracking-wider">Est. Net Profit</span></div>
+            <div className="text-[1.75rem] text-emerald-600 font-extrabold tracking-tight">{formatCurrency(netProfit)}</div>
+            <div className="text-[0.85rem] text-emerald-600 font-extrabold mt-1">{profitMargin}% Margin</div>
           </div>
         </div>
 
-        <div style={S.chartGrid}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
 
           {/* PROFIT & LOSS BREAKDOWN */}
-          <div style={{ ...S.card, gridColumn: "span 2" }}>
-            <div style={S.cardHeader}><h2 style={S.cardTitle}>Profit & Loss Statement (Estimated)</h2></div>
-            <div style={{ padding: "1.5rem", display: "flex", gap: "2rem", alignItems: "center" }}>
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm lg:col-span-2">
+            <div className="p-6 border-b border-slate-50 font-bold"><h2 className="text-lg text-slate-900 m-0">Profit & Loss Statement (Estimated)</h2></div>
+            <div className="p-6 flex gap-8 items-center">
 
               {/* Donut Chart */}
-              <div style={{ width: "220px", height: "220px", flexShrink: 0 }}>
+              <div className="w-[220px] h-[220px] shrink-0">
                 {netSales > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -624,27 +787,27 @@ export default function Admin() {
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '12px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: '0.8rem', fontWeight: 600 }}>No Data</div>
+                  <div className="w-full h-full rounded-full border-[12px] border-slate-100 flex items-center justify-center text-slate-400 text-[0.8rem] font-bold">No Data</div>
                 )}
               </div>
 
               {/* P&L Ledger */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid #E2E8F0' }}>
-                  <span style={{ color: '#64748B', fontWeight: 600, fontSize: '0.95rem' }}>Net Sales (Base Revenue)</span>
-                  <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '1.05rem' }}>{formatCurrency(netSales)}</span>
+              <div className="flex-1 flex flex-col gap-4">
+                <div className="flex justify-between pb-2.5 border-b border-slate-200">
+                  <span className="text-slate-500 font-bold text-[0.95rem]">Net Sales (Base Revenue)</span>
+                  <span className="font-extrabold text-slate-900 text-[1.05rem]">{formatCurrency(netSales)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px dashed #E2E8F0' }}>
-                  <span style={{ color: '#EF4444', fontWeight: 600, fontSize: '0.95rem' }}>(-) Food Cost (Est. 35%)</span>
-                  <span style={{ fontWeight: 700, color: '#EF4444' }}>{formatCurrency(estimatedCogs)}</span>
+                <div className="flex justify-between pb-2.5 border-b border-dashed border-slate-200">
+                  <span className="text-red-500 font-bold text-[0.95rem]">(-) Food Cost (Est. 35%)</span>
+                  <span className="font-bold text-red-500">{formatCurrency(estimatedCogs)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '2px solid #E2E8F0' }}>
-                  <span style={{ color: '#F59E0B', fontWeight: 600, fontSize: '0.95rem' }}>(-) Operating Expenses (Est. 25%)</span>
-                  <span style={{ fontWeight: 700, color: '#F59E0B' }}>{formatCurrency(operatingExpenses)}</span>
+                <div className="flex justify-between pb-2.5 border-b-2 border-slate-200">
+                  <span className="text-amber-500 font-bold text-[0.95rem]">(-) Operating Expenses (Est. 25%)</span>
+                  <span className="font-bold text-amber-500">{formatCurrency(operatingExpenses)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px' }}>
-                  <span style={{ color: '#10B981', fontWeight: 800, fontSize: '1.2rem' }}>Net Profit</span>
-                  <span style={{ fontWeight: 800, color: '#10B981', fontSize: '1.2rem' }}>{formatCurrency(netProfit)}</span>
+                <div className="flex justify-between pt-2">
+                  <span className="text-emerald-500 font-extrabold text-[1.2rem]">Net Profit</span>
+                  <span className="font-extrabold text-emerald-500 text-[1.2rem]">{formatCurrency(netProfit)}</span>
                 </div>
               </div>
 
@@ -652,31 +815,26 @@ export default function Admin() {
           </div>
 
           {/* MENU PERFORMANCE */}
-          <div style={S.card}>
-            <div style={S.cardHeader}><h2 style={S.cardTitle}>Top Selling Items</h2></div>
-            <div style={{ padding: "1.5rem" }}>
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm">
+            <div className="p-6 border-b border-slate-50 font-bold"><h2 className="text-lg text-slate-900 m-0">Top Selling Items</h2></div>
+            <div className="p-6">
               {topSellingProducts.length === 0 ? (
-                <div style={{ textAlign: "center", color: "#64748B", padding: "2rem 0", fontWeight: 500 }}>No sales data recorded.</div>
+                <div className="text-center text-slate-500 py-8 font-medium">No sales data recorded.</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="flex flex-col gap-5">
                   {topSellingProducts.map((p, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: '8px',
-                          backgroundColor: i === 0 ? '#FFF7F5' : '#F8FAFC',
-                          color: i === 0 ? '#FF5A00' : '#64748B',
-                          border: `1px solid ${i === 0 ? '#FFD8CC' : '#E2E8F0'}`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 800
-                        }}>
+                    <div key={i} className="flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[0.85rem] font-extrabold border ${i === 0 ? "bg-orange-50 text-[#FF5A00] border-orange-100" : "bg-slate-50 text-slate-500 border-slate-200"
+                          }`}>
                           #{i + 1}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.95rem', marginBottom: '2px' }}>{p.name}</div>
-                          <div style={{ color: '#64748B', fontSize: '0.80rem', fontWeight: 500 }}>{p.qty} units sold</div>
+                          <div className="font-bold text-slate-900 text-[0.95rem] mb-0.5">{p.name}</div>
+                          <div className="text-slate-500 text-[0.8rem] font-medium">{p.qty} units sold</div>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>{formatCurrency(p.revenue)}</div>
+                      <div className="font-extrabold text-slate-900 text-[0.95rem]">{formatCurrency(p.revenue)}</div>
                     </div>
                   ))}
                 </div>
@@ -688,25 +846,26 @@ export default function Admin() {
 
         {/* ADMIN EXCLUSIVE: BRANCH RANKINGS */}
         {role === "ADMIN" && (
-          <div style={{ ...S.card, marginTop: '2rem' }}>
-            <div style={S.cardHeader}><h2 style={S.cardTitle}>Fleet Performance Leaderboard</h2></div>
-            <div style={{ padding: "1.5rem" }}>
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm mt-8">
+            <div className="p-6 border-b border-slate-50 font-bold"><h2 className="text-lg text-slate-900 m-0">Fleet Performance Leaderboard</h2></div>
+            <div className="p-6">
               {displayBranches.length === 0 ? (
-                <div style={{ color: '#64748B' }}>No branches available.</div>
+                <div className="text-slate-500 font-medium">No branches available.</div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6">
                   {[...displayBranches].sort((a, b) => b.revenue - a.revenue).map((b, i) => (
-                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #E2E8F0', borderRadius: '12px', backgroundColor: '#F8FAFC' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: i === 0 ? '#FEF3C7' : '#FFFFFF', color: i === 0 ? '#D97706' : '#64748B', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800 }}>
+                    <div key={b.id} className="flex justify-between items-center p-4 border border-slate-200 rounded-xl bg-slate-50 shadow-sm transition-all hover:bg-white">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[0.8rem] font-extrabold border ${i === 0 ? "bg-amber-100 text-amber-600 border-amber-200" : "bg-white text-slate-500 border-slate-200"
+                          }`}>
                           {i + 1}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.95rem' }}>{b.name}</div>
-                          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 500 }}>{b.location}</div>
+                          <div className="font-bold text-slate-900 text-[0.95rem]">{b.name}</div>
+                          <div className="text-slate-500 text-[0.75rem] font-medium">{b.location}</div>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 800, color: '#10B981', fontSize: '1rem' }}>{formatCurrency(b.revenue)}</div>
+                      <div className="font-extrabold text-emerald-500 text-[1rem]">{formatCurrency(b.revenue)}</div>
                     </div>
                   ))}
                 </div>
@@ -721,42 +880,74 @@ export default function Admin() {
 
   // ─── SETTINGS COMPONENT ────────────────────────────────────────────────────
   const renderSettings = () => (
-    <div style={S.mainContent}>
-      <div style={S.headerRow}>
+    <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+      <div className="flex justify-between items-end mb-10">
         <div>
-          <h1 style={S.pageTitle}>System Settings</h1>
-          <p style={S.pageSubtitle}>Manage your profile, preferences, and system configurations.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">System Settings</h1>
+          <p className="text-base text-slate-500 font-medium">Manage your profile, preferences, and system configurations.</p>
         </div>
       </div>
 
-      <div style={{ ...S.card, padding: '2rem', maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-[800px] mx-auto flex flex-col gap-8 shadow-sm">
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: S.pageTitle.color, borderBottom: S.cardHeader.borderBottom, paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
+          <h2 className="text-[1.1rem] font-bold text-slate-900 border-b border-slate-100 pb-3 mb-6">
             Personal Profile
           </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)', color: '#fff', fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+          <div className="flex items-center gap-8">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-[2rem] flex items-center justify-center font-bold">
               {user?.name ? user.name.charAt(0).toUpperCase() : <Icons.User />}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center' }}>
-                <span style={{ color: S.pageSubtitle.color, fontSize: '0.875rem' }}>Full Name</span>
-                <span style={{ fontWeight: 500, color: S.pageTitle.color }}>{user?.name || "N/A"}</span>
+            <div className="flex flex-col gap-2 flex-1">
+              <div className="grid grid-cols-[120px,1fr] items-center">
+                <span className="text-slate-500 text-[0.875rem] font-medium">Full Name</span>
+                <span className="font-semibold text-slate-900">{user?.name || "N/A"}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center' }}>
-                <span style={{ color: S.pageSubtitle.color, fontSize: '0.875rem' }}>Email Address</span>
-                <span style={{ fontWeight: 500, color: S.pageTitle.color }}>{user?.email || "N/A"}</span>
+              <div className="grid grid-cols-[120px,1fr] items-center">
+                <span className="text-slate-500 text-[0.875rem] font-medium">Email Address</span>
+                <span className="font-semibold text-slate-900">{user?.email || "N/A"}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center' }}>
-                <span style={{ color: S.pageSubtitle.color, fontSize: '0.875rem' }}>Account Role</span>
-                <span style={S.userRoleBadge}>{role}</span>
+              <div className="grid grid-cols-[120px,1fr] items-center">
+                <span className="text-slate-500 text-[0.875rem] font-medium">Account Role</span>
+                <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 text-[0.65rem] font-bold rounded uppercase tracking-wider w-fit">{role}</span>
               </div>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
 
-
+  // ─── MENU MANAGEMENT COMPONENT ────────────────────────────────────────────────
+  const renderMenuManagement = () => (
+    <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+      <div className="flex justify-between items-end mb-10">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Menu Management</h1>
+          <p className="text-base text-slate-500 font-medium">Manage individual branch items or global menu items.</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-10 items-start">
+        <AddProductForm
+          handleAddProduct={handleAddProduct}
+          newProduct={newProduct}
+          handleChange={(e) => setNewProduct({ ...newProduct, [e.target.name]: e.target.value })}
+          categories={categories}
+          branches={displayBranches}
+          role={role}
+        />
+        <ProductInventoryList
+          categories={categories}
+          inventoryCategory={inventoryCategory}
+          setInventoryCategory={setInventoryCategory}
+          inventorySearch={inventorySearch}
+          setInventorySearch={setInventorySearch}
+          filteredInventory={filteredInventory}
+          stockInputs={stockInputs}
+          handleStockInputChange={handleStockInputChange}
+          adjustStock={adjustStock}
+          saveStockUpdate={saveStockUpdate}
+          handleDeleteProduct={handleDeleteProduct}
+        />
       </div>
     </div>
   );
@@ -764,23 +955,24 @@ export default function Admin() {
 
   // ─── MAIN LAYOUT ───────────────────────────────────────────────────────────
   return (
-    <div style={S.layout}>
+    <div className="flex flex-row h-screen w-screen bg-slate-50 font-inter text-slate-900 overflow-hidden box-border">
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
       {/* SIDEBAR SIDE (FULL HEIGHT) */}
-      <div style={{ ...S.sidebar, width: isSidebarCollapsed ? "80px" : "240px" }}>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <div className={`bg-white border-r border-slate-200 flex flex-col flex-shrink-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isSidebarCollapsed ? "w-[80px]" : "w-[240px]"}`}>
+        <div className="flex-1 flex flex-col">
 
           {/* Logo Header inside Sidebar */}
-          <div style={{ ...S.sidebarHeader, padding: isSidebarCollapsed ? "0" : "0 20px", justifyContent: isSidebarCollapsed ? "center" : "flex-start" }}>
-            <div style={S.logoIcon}>V</div>
-            {!isSidebarCollapsed && <span style={S.logoText}>Velvet Plate</span>}
+          <div className={`h-[72px] flex items-center border-b border-slate-200 flex-shrink-0 ${isSidebarCollapsed ? "justify-center px-0" : "justify-start px-5"}`}>
+            <div className="w-9 h-9 rounded-xl bg-[#FF5A00] text-white flex items-center justify-center font-black text-xl flex-shrink-0">V</div>
+            {!isSidebarCollapsed && <span className="text-slate-900 font-extrabold tracking-tight text-xl whitespace-nowrap ml-3">Velvet Plate</span>}
           </div>
 
-          <nav style={S.sidebarNav}>
+          <nav className="py-6 px-4 flex flex-col gap-2">
             {[
               { id: "Dashboard", icon: <Icons.Dashboard /> },
               { id: "Branches", icon: <Icons.Branches /> },
+              { id: "Menu", icon: <Icons.Menu /> },
               { id: "Analytics", icon: <Icons.Analytics /> },
               { id: "Settings", icon: <Icons.Settings /> }
             ].map(item => (
@@ -788,29 +980,28 @@ export default function Admin() {
                 key={item.id}
                 title={item.id}
                 onClick={() => { setActiveSidebarItem(item.id); setSelectedBranchId(""); }}
-                style={{ ...S.sidebarNavItem, ...(activeSidebarItem === item.id && !selectedBranchId ? S.sidebarNavItemActive : {}), justifyContent: isSidebarCollapsed ? "center" : "flex-start", padding: isSidebarCollapsed ? "12px" : "10px 16px" }}
+                className={`flex items-center gap-3 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200 overflow-hidden box-border ${isSidebarCollapsed ? "justify-center p-3" : "justify-start py-2.5 px-4"
+                  } ${activeSidebarItem === item.id && !selectedBranchId
+                    ? "bg-[#FFF7F5] text-[#FF5A00] border-l-4 border-[#FF5A00]"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
               >
-                <div style={{ ...S.sidebarIcon, color: activeSidebarItem === item.id && !selectedBranchId ? "#0f172a" : "#64748b" }}>
+                <div className={`flex items-center justify-center w-6 h-6 flex-shrink-0 ${activeSidebarItem === item.id && !selectedBranchId ? "text-[#FF5A00]" : "text-slate-400"}`}>
                   {item.icon}
                 </div>
-                {!isSidebarCollapsed && <span style={{ whiteSpace: "nowrap" }}>{item.id}</span>}
+                {!isSidebarCollapsed && <span className="whitespace-nowrap">{item.id}</span>}
               </div>
             ))}
           </nav>
 
           {/* Bottom Collapse Button */}
-          <div style={{ marginTop: "auto", padding: isSidebarCollapsed ? "16px 8px" : "16px" }}>
+          <div className={`mt-auto ${isSidebarCollapsed ? "p-4 px-2" : "p-4"}`}>
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                width: "100%", padding: "10px", borderRadius: "8px", border: "none",
-                backgroundColor: S.sidebarNavItemActive.backgroundColor, color: S.pageSubtitle.color, fontSize: "0.875rem",
-                fontWeight: 500, cursor: "pointer", transition: "all 0.2s"
-              }}
+              className="flex items-center justify-center gap-2 w-full p-2.5 rounded-lg border-none bg-[#FFF7F5] text-slate-500 text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-orange-50"
             >
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d={isSidebarCollapsed ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
+              <svg className={`transition-transform duration-300 ${isSidebarCollapsed ? "rotate-180" : ""}`} width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
               {!isSidebarCollapsed && <span>Collapse</span>}
             </button>
@@ -819,40 +1010,30 @@ export default function Admin() {
       </div>
 
       {/* RIGHT SIDE (TOPBAR + CONTENT) */}
-      <div style={S.bodyWrapper}>
+      <div className="flex flex-col flex-1 overflow-hidden">
 
         {/* NEW NARROW TOPBAR */}
-        <header style={{ ...S.topbar, position: "relative" }}>
-          <div style={S.topbarLeft}></div>
+        <header className="h-[72px] bg-white/90 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0 z-50 sticky top-0">
+          <div className="flex items-center"></div>
 
           {/* PERFECTLY CENTERED TITLE */}
-          <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", fontWeight: 600, color: S.pageTitle.color, fontSize: "1.1rem" }}>
+          <div className="absolute left-1/2 -translate-x-1/2 font-semibold text-slate-900 text-lg">
             Admin Console
           </div>
 
-          <div style={S.topbarRight}>
+          <div className="flex items-center">
 
             {/* PENDING REQUESTS BUTTON → links to dedicated page */}
             {role === "ADMIN" && (
-              <div style={{ marginRight: "1rem" }}>
+              <div className="mr-4">
                 <button
                   onClick={() => navigate("/admin/pending-requests")}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    padding: '8px 16px', borderRadius: '8px', border: '1px solid #E2E8F0',
-                    backgroundColor: '#FFFFFF', color: '#0F172A', fontSize: '0.875rem',
-                    fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-                    boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)'
-                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 text-sm font-semibold cursor-pointer transition-all duration-200 shadow-sm hover:bg-slate-50"
                 >
                   <Icons.Users />
                   Pending Requests
                   {pendingStores.length > 0 && (
-                    <span style={{
-                      backgroundColor: '#FF5A00', color: '#FFFFFF', fontSize: '0.75rem',
-                      fontWeight: 800, padding: '2px 8px', borderRadius: '100px',
-                      marginLeft: '4px'
-                    }}>
+                    <span className="bg-[#FF5A00] text-white text-xs font-extrabold px-2 py-0.5 rounded-full ml-1">
                       {pendingStores.length}
                     </span>
                   )}
@@ -861,19 +1042,25 @@ export default function Admin() {
             )}
 
 
-            <div style={{ position: "relative" }}>
-              <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} style={S.avatarBtn}>
+            <div className="relative">
+              <button
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-900 cursor-pointer flex items-center justify-center transition-all duration-200 hover:bg-slate-200"
+              >
                 <Icons.User />
               </button>
               {isProfileDropdownOpen && (
-                <div style={S.dropdownMenu}>
-                  <div style={S.dropdownHeader}>
-                    <div style={S.userName}>{user?.name || "User"}</div>
-                    <div style={S.userEmail}>{user?.email || ""}</div>
-                    <div style={S.userRoleBadge}>{role}</div>
+                <div className="absolute top-[120%] right-0 w-[220px] bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden z-[100]">
+                  <div className="p-4 bg-slate-50 border-b border-slate-200">
+                    <div className="font-semibold text-slate-900 text-sm">{user?.name || "User"}</div>
+                    <div className="text-slate-500 text-xs mt-0.5">{user?.email || ""}</div>
+                    <div className="inline-block mt-1.5 px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-md uppercase tracking-wider">{role}</div>
                   </div>
-                  <div style={S.dropdownDivider}></div>
-                  <button onClick={handleLogout} style={S.dropdownItemLogout}>
+                  <div className="h-px bg-slate-100 italic"></div>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 w-full p-3 px-4 border-none bg-white text-red-500 text-sm font-semibold cursor-pointer transition-colors hover:bg-red-50"
+                  >
                     <Icons.Logout />
                     <span>Logout</span>
                   </button>
@@ -884,128 +1071,17 @@ export default function Admin() {
         </header>
 
         {/* MAIN WORKING AREA */}
-        <div style={S.mainArea}>
+        <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden text-slate-900 bg-slate-50">
           {selectedBranchId ? renderBranchDetail() : (
             activeSidebarItem === "Dashboard" ? renderDashboardGlobal() :
               activeSidebarItem === "Branches" ? renderBranchesList() :
-                activeSidebarItem === "Analytics" ? renderAnalytics() :
-                  activeSidebarItem === "Settings" ? renderSettings() :
-                    <div style={S.emptyState}>Module '{activeSidebarItem}' is under development.</div>
+                activeSidebarItem === "Menu" ? renderMenuManagement() :
+                  activeSidebarItem === "Analytics" ? renderAnalytics() :
+                    activeSidebarItem === "Settings" ? renderSettings() :
+                      <div className="p-20 flex flex-col items-center justify-center gap-4 text-slate-500 text-base text-center font-medium">Module '{activeSidebarItem}' is under development.</div>
           )}
         </div>
       </div>
     </div>
   );
 }
-
-// ─── SaaS STYLES ─────────────────────────────────────────────────────────────
-const getStyles = (isDark) => ({
-  // We force the premium Light Mode aesthetic
-  layout: { display: "flex", flexDirection: "row", height: "100vh", width: "100vw", backgroundColor: "#F8FAFC", fontFamily: "'Inter', sans-serif", color: "#0F172A", overflow: "hidden", boxSizing: "border-box" },
-
-  // Body Layout
-  bodyWrapper: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" },
-
-  // Topbar
-  topbar: { height: "72px", backgroundColor: "rgba(255, 255, 255, 0.9)", backdropFilter: "blur(12px)", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2rem", flexShrink: 0, zIndex: 50, boxSizing: "border-box" },
-  topbarLeft: { display: "flex", alignItems: "center" },
-  topbarRight: { display: "flex", alignItems: "center" },
-  logoIcon: { width: "36px", height: "36px", borderRadius: "10px", background: "#FF5A00", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "900", fontSize: "1.4rem", flexShrink: 0 },
-  logoText: { color: "#0F172A", fontWeight: "800", letterSpacing: "-0.02em", fontSize: "1.25rem", whiteSpace: "nowrap", marginLeft: "12px" },
-  avatarBtn: { width: "40px", height: "40px", borderRadius: "12px", background: "#F1F5F9", border: "1px solid #E2E8F0", color: "#0F172A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
-
-  // Dropdown
-  dropdownMenu: { position: "absolute", top: "120%", right: "0", width: "220px", backgroundColor: "#FFFFFF", borderRadius: "8px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)", border: "1px solid #E2E8F0", overflow: "hidden", zIndex: 100 },
-  dropdownHeader: { padding: "16px", backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" },
-  userName: { fontWeight: "600", color: "#0F172A", fontSize: "0.875rem" },
-  userEmail: { color: "#64748B", fontSize: "0.75rem", marginTop: "2px" },
-  userRoleBadge: { display: "inline-block", marginTop: "6px", padding: "2px 8px", backgroundColor: "#F1F5F9", color: "#64748B", fontSize: "0.65rem", fontWeight: "700", borderRadius: "4px" },
-  dropdownDivider: { height: "1px", backgroundColor: "#F1F5F9" },
-  dropdownItemLogout: { display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "12px 16px", border: "none", backgroundColor: "#FFFFFF", color: "#EF4444", fontSize: "0.875rem", fontWeight: "600", cursor: "pointer", transition: "background-color 0.2s" },
-
-  // Notifications
-  iconBtn: { background: "none", border: "none", color: "#64748B", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s", position: "relative" },
-  notificationDot: { position: "absolute", top: "2px", right: "2px", backgroundColor: "#FF5A00", color: "#fff", fontSize: "10px", fontWeight: "bold", width: "16px", height: "16px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #FFFFFF" },
-  notificationsDropdown: { position: "absolute", top: "120%", right: "0", width: "380px", backgroundColor: "#FFFFFF", borderRadius: "12px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)", border: "1px solid #E2E8F0", overflow: "hidden", zIndex: 100 },
-  notificationsHeader: { padding: "12px 16px", backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0", fontWeight: "600", color: "#0F172A", fontSize: "0.875rem" },
-  notificationItem: { padding: "16px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "flex-start", transition: "background-color 0.15s", ":hover": { backgroundColor: "#F8FAFC" } },
-  approveBtn: { backgroundColor: "#FF5A00", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: "600", cursor: "pointer", transition: "background 0.2s", alignSelf: "center", boxShadow: "0 1px 2px rgba(255, 90, 0, 0.2)" },
-
-  // Sidebar
-  sidebar: { backgroundColor: "#FFFFFF", borderRight: "1px solid #E2E8F0", display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.3s cubic-bezier(0.16, 1, 0.3, 1)" },
-  sidebarHeader: { height: "72px", display: "flex", alignItems: "center", borderBottom: "1px solid #E2E8F0", flexShrink: 0, paddingLeft: "20px" },
-  sidebarNav: { padding: "24px 16px", display: "flex", flexDirection: "column", gap: "8px" },
-  sidebarNavItem: { display: "flex", alignItems: "center", gap: "12px", borderRadius: "10px", fontSize: "0.9rem", fontWeight: 600, color: "#64748B", cursor: "pointer", transition: "all 0.2s ease", overflow: "hidden", boxSizing: "border-box" },
-  sidebarNavItemActive: { backgroundColor: "#FFF7F5", color: "#FF5A00", borderLeft: "3px solid #FF5A00" },
-  sidebarIcon: { display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", flexShrink: 0 },
-
-  // Main Area
-  mainArea: { flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", color: "#0F172A" },
-  mainContent: { maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "3rem 2.5rem", boxSizing: "border-box" },
-  headerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2.5rem" },
-
-  // Typography
-  pageTitle: { fontSize: "2rem", fontWeight: 800, color: "#0F172A", margin: "0 0 8px 0", letterSpacing: "-0.03em" },
-  pageSubtitle: { fontSize: "1rem", color: "#64748B", margin: 0 },
-
-  // Fleet Grid & Cards
-  storeGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "1.5rem" },
-  storeCard: { backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E2E8F0", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.5rem", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)", cursor: "pointer" },
-  storeCardHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
-  storeIcon: { width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#FFF7F5", border: "1px solid #FFD8CC", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", flexShrink: 0 },
-  storeName: { fontSize: "1.1rem", fontWeight: 800, color: "#0F172A", margin: "0 0 4px 0", letterSpacing: "-0.01em" },
-  storeLocation: { fontSize: "0.85rem", color: "#64748B", margin: 0 },
-
-  // Status Badges
-  statusBadgeLive: { display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "100px", backgroundColor: "#F0FDF4", border: "1px solid #DCFCE7", color: "#16A34A", fontSize: "0.75rem", fontWeight: 700 },
-  statusBadgeOffline: { display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "100px", backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B", fontSize: "0.75rem", fontWeight: 700 },
-  statusDot: { width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "currentColor" },
-
-  // Card Metrics
-  storeMetrics: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", padding: "1rem", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px solid #F1F5F9" },
-  metricBox: { display: "flex", flexDirection: "column", gap: "4px" },
-  metricLabel: { fontSize: "0.75rem", color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" },
-  metricValue: { fontSize: "1.1rem", color: "#0F172A", fontWeight: 800 },
-
-  // Command Center specific
-  commandHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '1.5rem', marginBottom: '2.5rem', paddingBottom: '2rem', borderBottom: '1px solid #E2E8F0' },
-  commandIcon: { width: "64px", height: "64px", borderRadius: "16px", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", boxShadow: "0 4px 6px rgba(0,0,0,0.02)" },
-  avatarBtnLg: { width: "48px", height: "48px", borderRadius: "12px", background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center" },
-
-  // Additional Buttons
-  actionBtnBlue: { width: "100%", padding: "10px", borderRadius: "8px", fontSize: "0.9rem", fontWeight: 700, color: "#FFFFFF", backgroundColor: "#0F172A", border: "none", cursor: "pointer", transition: "background 0.2s" },
-  actionBtnRedOutline: { padding: "8px 16px", borderRadius: "8px", fontSize: "0.875rem", fontWeight: 700, color: "#EF4444", backgroundColor: "#FFFFFF", border: "1px solid #FEE2E2", cursor: "pointer", transition: "all 0.2s" },
-
-  // Stats Grid
-  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.5rem", marginBottom: "3rem" },
-  statCard: { backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E2E8F0", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", boxSizing: "border-box" },
-  statHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  statLabel: { fontSize: "0.875rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em" },
-  statValue: { fontSize: "2.25rem", fontWeight: 800, color: "#0F172A", letterSpacing: "-0.03em", lineHeight: "1" },
-  trendBadge: { fontSize: "0.75rem", fontWeight: 700, padding: "4px 10px", borderRadius: "6px", display: "inline-flex", alignItems: "center" },
-
-  // Cards
-  chartGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1.5rem", marginBottom: "2rem" },
-  card: { backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E2E8F0", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", boxSizing: "border-box" },
-  cardHeader: { padding: "1.5rem", borderBottom: "1px solid #F1F5F9", boxSizing: "border-box" },
-  cardTitle: { fontSize: "1.1rem", fontWeight: 700, color: "#0F172A", margin: 0 },
-
-  // Tabs
-  tabs: { display: "flex", gap: "2rem", borderBottom: "1px solid #E2E8F0", marginBottom: "2rem" },
-  tabBtn: { padding: "0 0 1rem 0", border: "none", background: "none", color: "#64748B", fontSize: "0.95rem", fontWeight: 600, cursor: "pointer", borderBottom: "2px solid transparent", transition: "all 0.2s" },
-  tabBtnActive: { color: "#FF5A00", borderBottomColor: "#FF5A00" },
-
-  // Tables
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { padding: "1rem 1.5rem", textAlign: "left", fontSize: "0.75rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" },
-  tr: { borderBottom: "1px solid #F1F5F9", transition: "background-color 0.2s", cursor: "pointer" },
-  td: { padding: "1.25rem 1.5rem", verticalAlign: "middle", color: "#475569" },
-
-  // Buttons
-  primaryBtn: { padding: "10px 20px", borderRadius: "8px", fontSize: "0.9rem", fontWeight: 700, color: "#fff", backgroundColor: "#FF5A00", border: "none", cursor: "pointer", transition: "transform 0.1s", boxShadow: "0 4px 6px rgba(255, 90, 0, 0.2)" },
-  actionBtn: { padding: "8px 16px", borderRadius: "8px", fontSize: "0.875rem", fontWeight: 600, color: "#0F172A", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" },
-  downloadButton: { padding: "10px 18px", borderRadius: "8px", fontSize: "0.9rem", fontWeight: 700, color: "#475569", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" },
-  linkBtn: { background: "none", border: "none", color: "#FF5A00", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: "1rem", display: "inline-flex", alignItems: "center", transition: "all 0.2s" },
-
-  emptyState: { padding: "5rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", color: "#64748B", fontSize: "1rem", textAlign: "center", fontWeight: 500 }
-});

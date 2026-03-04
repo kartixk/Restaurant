@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
 import useCartStore from "../store/useCartStore";
-import { motion } from "framer-motion";
-import { ShoppingBag, User, LogOut, Home, Settings } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShoppingBag, User, LogOut, Home } from "lucide-react";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -12,7 +12,6 @@ export default function Navbar() {
   const cartData = useCartStore((state) => state.cart);
   const setIsCartOpen = useCartStore((state) => state.setIsCartOpen);
 
-  // Calculate total distinct items in cart
   const cartItemCount = cartData?.items?.length || 0;
 
   const handleLogout = () => {
@@ -30,408 +29,141 @@ export default function Navbar() {
   if (isInternalPage) return null;
 
   return (
-    <>
-      <nav style={{
-        ...styles.navbar,
-        background: isAuthPage ? 'transparent' : 'rgba(255, 255, 255, 0.08)',
-        backdropFilter: isAuthPage ? 'none' : 'blur(16px)',
-        WebkitBackdropFilter: isAuthPage ? 'none' : 'blur(16px)',
-        borderBottom: isAuthPage ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: isAuthPage ? 'none' : '0 4px 30px rgba(0, 0, 0, 0.1)',
-        position: isAuthPage ? 'absolute' : 'sticky'
-      }}>
-        <div className="navbar-container" style={styles.container}>
+    <nav className={`w-full top-0 z-[1000] transition-all duration-300 ${isAuthPage
+        ? "bg-transparent border-none shadow-none absolute"
+        : "bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm sticky"
+      }`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
 
-          {/* 1. BRAND LOGO */}
-          <Link to={isAdminPage ? "/admin" : "/"} className="navbar-logo" style={{ ...styles.logo, margin: isAuthPage ? '0 auto' : '0' }}>
-            <div style={styles.logoIcon}>
-              <span style={styles.logoIconText}>V</span>
-            </div>
-            <span style={styles.logoText}>Velvet Plate</span>
-          </Link>
+        {/* 1. BRAND LOGO */}
+        <Link
+          to={isAdminPage ? "/admin" : "/"}
+          className={`flex items-center gap-3 no-underline group ${isAuthPage ? 'mx-auto' : ''}`}
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-pink-500/20 group-hover:rotate-12 transition-all">
+            <span className="text-white font-black text-xl italic leading-none">V</span>
+          </div>
+          <span className="text-xl md:text-2xl font-black tracking-tighter text-slate-900 group-hover:text-pink-600 transition-colors">
+            Velvet Plate
+          </span>
+        </Link>
 
-          {/* 2. CENTERED NAVIGATION LINKS (Hidden for Admin) */}
-          {(!isAuthPage && !isAdminPage) && (
-            <div className="navbar-links" style={styles.navLinks}>
-              {(!role || role === "USER") && (
-                <Link to="/" style={isActive("/") ? styles.activeLink : styles.link}>
-                  <Home size={18} style={isActive("/") ? styles.activeIcon : styles.icon} />
-                  <span className="link-text">Home</span>
-                </Link>
-              )}
+        {/* 2. CENTERED NAVIGATION LINKS */}
+        {(!isAuthPage && !isAdminPage) && (
+          <div className="hidden md:flex items-center gap-1 bg-slate-50 p-1.5 rounded-full border border-slate-200 shadow-inner">
+            {(!role || role === "USER") && (
+              <Link
+                to="/"
+                className={`relative px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all group ${isActive("/")
+                    ? "bg-white text-slate-950 shadow-md ring-1 ring-black/5"
+                    : "text-slate-400 hover:text-slate-600"
+                  }`}
+              >
+                <Home size={14} className={isActive("/") ? "text-pink-500" : "text-slate-400 group-hover:text-slate-600"} />
+                <span>Home</span>
+                {!isActive("/") && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-pink-500 transition-all group-hover:w-1/3 rounded-full" />
+                )}
+              </Link>
+            )}
 
-              {(!role || role === "USER") && (
-                <button onClick={() => setIsCartOpen(true)} style={{ ...styles.link, background: 'transparent', border: 'none', cursor: 'pointer' }}>
-                  <div style={styles.cartIconWrapper}>
-                    <ShoppingBag size={18} style={styles.icon} />
-                    {cartItemCount > 0 && (
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="cart-badge"
-                        style={styles.cartBadge}
-                      >
-                        {cartItemCount}
-                      </motion.span>
-                    )}
-                  </div>
-                  <span className="link-text">Order</span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* 3. AUTH SECTION */}
-          {!isAuthPage && (
-            <div className="navbar-auth" style={styles.authSection}>
-              {!role ? (
-                <>
-                  <Link to="/login" style={styles.loginBtn}>Sign In</Link>
-                  <Link to="/signup" style={styles.signupBtn}>Sign Up</Link>
-                </>
-              ) : (
-                <div style={{ position: 'relative' }}>
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    style={{ ...styles.avatar, cursor: 'pointer' }}
-                  >
-                    <User size={18} color="#fff" />
-                  </motion.div>
-
-                  {/* Dropdown Menu */}
-                  {isDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      style={styles.dropdownMenu}
+            {(!role || role === "USER") && (
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="relative px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-white/50 transition-all flex items-center gap-2 group"
+              >
+                <div className="relative">
+                  <ShoppingBag size={14} className="group-hover:text-slate-600 transition-colors" />
+                  {cartItemCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1.5 -right-2.5 bg-gradient-to-br from-rose-500 to-red-600 text-white text-[9px] font-black min-w-[16px] h-[16px] rounded-full flex items-center justify-center ring-2 ring-white shadow-md shadow-red-500/20"
                     >
-                      <div style={styles.dropdownHeader}>
-                        <div style={styles.userName}>{user?.name || "User"}</div>
-                        <div style={styles.userEmail}>{user?.email || ""}</div>
-                        <div style={styles.userRoleBadge}>{role}</div>
-                      </div>
-                      <div style={styles.dropdownDivider}></div>
-                      <button onClick={handleLogout} style={styles.dropdownItemLogout}>
-                        <LogOut size={16} />
-                        <span>Logout</span>
-                      </button>
-                    </motion.div>
+                      {cartItemCount}
+                    </motion.span>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+                <span>Order</span>
+              </button>
+            )}
+          </div>
+        )}
 
-        </div>
-      </nav>
-      <style>{`
-        /* Global Navigation Enhancements */
-        .navbar-links a {
-          position: relative;
-          overflow: hidden;
-        }
-        
-        .navbar-links a::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 50%;
-          width: 0;
-          height: 2px;
-          background: #ec4899;
-          transition: all 0.3s ease;
-          transform: translateX(-50%);
-          border-radius: 2px;
-        }
-        
-        .navbar-links a:hover::after {
-          width: 60%;
-        }
+        {/* 3. AUTH SECTION */}
+        {!isAuthPage && (
+          <div className="flex items-center gap-4">
+            {!role ? (
+              <div className="flex items-center gap-2 md:gap-4">
+                <Link
+                  to="/login"
+                  className="px-4 md:px-6 py-2 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:text-pink-600 transition-all underline decoration-pink-500/0 hover:decoration-pink-500/100 underline-offset-8"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/signup"
+                  className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-pink-500/20 hover:shadow-pink-500/40 hover:-translate-y-0.5 transition-all"
+                >
+                  Join Us
+                </Link>
+              </div>
+            ) : (
+              <div className="relative">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center ring-2 ring-white shadow-lg shadow-pink-500/20 cursor-pointer overflow-hidden group"
+                >
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={18} color="#fff" />
+                  )}
+                </motion.div>
 
-        @media (max-width: 768px) {
-          .navbar-container {
-            flex-direction: column !important;
-            gap: 15px !important;
-            padding: 12px 15px !important;
-          }
-          .navbar-links {
-            width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
-          }
-          .link-text {
-            display: none;
-          }
-          .navbar-links a {
-            padding: 0.6rem !important;
-            border-radius: 50% !important;
-          }
-          .navbar-links a::after {
-             display: none;
-          }
-          .userRole {
-             display: none;
-          }
-        }
-      `}</style>
-    </>
+                {/* Dropdown Menu */}
+                <AnimatePresence>
+                  {isDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[-1]" onClick={() => setIsDropdownOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        className="absolute top-[120%] right-0 w-64 bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden z-[1001]"
+                      >
+                        <div className="p-6 bg-slate-50 flex flex-col gap-1 border-b border-slate-100">
+                          <div className="text-slate-950 font-black text-sm tracking-tight leading-none mb-1">
+                            {user?.name || "Premium Member"}
+                          </div>
+                          <div className="text-slate-400 font-medium text-xs mb-3">
+                            {user?.email || "member@velvetplate.com"}
+                          </div>
+                          <div className="px-3 py-1 bg-pink-100 text-pink-600 text-[9px] font-black uppercase tracking-widest rounded-full w-fit">
+                            {role}
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full p-4 flex items-center gap-3 text-red-600 hover:bg-red-50 rounded-2xl transition-all group"
+                          >
+                            <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
+                            <span className="font-black text-xs uppercase tracking-widest">Logout</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </nav>
   );
 }
-
-/* --- STYLES --- */
-const styles = {
-  navbar: {
-    width: '100%',
-    padding: '0.8rem 0',
-    top: 0,
-    zIndex: 1000,
-    marginBottom: '0', // We will let the hero section handle spacing
-  },
-  container: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '0 2rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-
-  // LOGO STYLES
-  logo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    textDecoration: 'none',
-    cursor: 'pointer'
-  },
-  logoIcon: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '10px',
-    background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 4px 10px rgba(236, 72, 153, 0.3)'
-  },
-  logoIconText: {
-    color: 'white',
-    fontWeight: '800',
-    fontSize: '1.2rem',
-    fontStyle: 'italic'
-  },
-  logoText: {
-    color: '#1e293b',
-    fontWeight: '800',
-    letterSpacing: '0.5px',
-    fontSize: '1.4rem',
-    textShadow: '0 1px 2px rgba(0,0,0,0.05)'
-  },
-
-  // NAVIGATION LINKS GROUP
-  navLinks: {
-    display: 'flex',
-    gap: '0.75rem',
-    background: 'rgba(255, 255, 255, 0.5)',
-    padding: '0.4rem',
-    borderRadius: '100px',
-    border: '1px solid rgba(0, 0, 0, 0.05)',
-  },
-
-  // Default Link Style
-  link: {
-    color: '#64748b',
-    textDecoration: 'none',
-    fontSize: '0.95rem',
-    fontWeight: '600',
-    padding: '0.6rem 1.25rem',
-    borderRadius: '100px',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  icon: {
-    color: '#64748b',
-    transition: 'all 0.3s ease',
-  },
-
-  // Active Link Style
-  activeLink: {
-    color: '#0f172a',
-    background: 'rgba(255, 255, 255, 0.8)',
-    textDecoration: 'none',
-    fontSize: '0.95rem',
-    fontWeight: '700',
-    padding: '0.6rem 1.25rem',
-    borderRadius: '100px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    border: '1px solid rgba(0, 0, 0, 0.05)'
-  },
-  activeIcon: {
-    color: '#ec4899', // Pink icon when active
-  },
-
-  cartIconWrapper: {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center'
-  },
-  cartBadge: {
-    position: 'absolute',
-    top: '-8px',
-    right: '-10px',
-    background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
-    color: 'white',
-    fontSize: '0.65rem',
-    fontWeight: 'bold',
-    minWidth: '18px',
-    height: '18px',
-    borderRadius: '9px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '0 4px',
-    boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
-    border: '2px solid white'
-  },
-
-  // AUTH SECTION
-  authSection: {
-    display: 'flex',
-    gap: '1rem',
-    alignItems: 'center'
-  },
-  loginBtn: {
-    color: '#ec4899',
-    textDecoration: 'none',
-    fontWeight: '700',
-    fontSize: '0.95rem',
-    padding: '0.5rem 1rem',
-    transition: 'color 0.2s',
-  },
-  signupBtn: {
-    color: '#ffffff',
-    background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-    textDecoration: 'none',
-    padding: '0.6rem 1.4rem',
-    borderRadius: '100px',
-    fontWeight: '600',
-    fontSize: '0.95rem',
-    boxShadow: '0 4px 15px rgba(236, 72, 153, 0.3)',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-  },
-
-  // LOGGED IN USER PROFILE
-  userProfile: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    background: 'rgba(255, 255, 255, 0.8)',
-    padding: '6px 16px 6px 6px',
-    borderRadius: '100px',
-    border: '1px solid rgba(0, 0, 0, 0.05)',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-  },
-  avatar: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: '2px solid white',
-    boxShadow: '0 2px 5px rgba(236, 72, 153, 0.2)'
-  },
-  userInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center'
-  },
-  userName: {
-    color: '#1e293b',
-    fontSize: '0.9rem',
-    fontWeight: '700',
-    lineHeight: '1.2'
-  },
-  userEmail: {
-    color: '#64748b',
-    fontSize: '0.7rem',
-    lineHeight: '1.2'
-  },
-  userRole: {
-    color: '#a855f7',
-    fontSize: '0.7rem',
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-  iconBtn: {
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid rgba(239, 68, 68, 0.2)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    cursor: 'pointer',
-    marginLeft: '4px',
-    transition: 'all 0.2s'
-  },
-
-  // DROPDOWN MENU
-  dropdownMenu: {
-    position: 'absolute',
-    top: '120%',
-    right: '0',
-    width: '240px',
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    boxShadow: '0 10px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
-    overflow: 'hidden',
-    zIndex: 1000,
-  },
-  dropdownHeader: {
-    padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '2px',
-    backgroundColor: '#f8fafc',
-  },
-  userRoleBadge: {
-    display: 'inline-block',
-    marginTop: '6px',
-    padding: '2px 8px',
-    backgroundColor: '#f1f5f9',
-    color: '#0f172a',
-    fontSize: '0.65rem',
-    fontWeight: '700',
-    borderRadius: '4px',
-    width: 'fit-content'
-  },
-  dropdownDivider: {
-    height: '1px',
-    backgroundColor: '#e2e8f0',
-  },
-  dropdownItemLogout: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    width: '100%',
-    padding: '12px 16px',
-    border: 'none',
-    backgroundColor: '#ffffff',
-    color: '#dc2626',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  }
-};

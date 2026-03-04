@@ -3,74 +3,111 @@ import React, { useState, useEffect } from "react";
 import ManagerLayout from "../components/ManagerLayout";
 import api from "../api/axios";
 import { toast } from "react-toastify";
-import { Wallet, ArrowUpRight, Clock, CheckCircle } from "lucide-react";
+
+const formatCurrency = (v) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(v);
 
 export default function ManagerPayouts() {
     const [branch, setBranch] = useState(null);
-    const [summary, setSummary] = useState({ totalAmount: 0, count: 0 });
+    const [summary, setSummary] = useState({ earned: 0, fee: 0 });
+    const [requesting, setRequesting] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetch = async () => {
             try {
-                const [branchRes, statsRes] = await Promise.all([
-                    api.get("/branches/my-branch"),
-                    api.get("/reports/branch-sales?type=month")
-                ]);
-                setBranch(branchRes.data);
-                const stats = Array.isArray(statsRes.data) ? (statsRes.data[0] || {}) : statsRes.data;
-                setSummary({ totalAmount: stats.totalAmount || 0, count: stats.count || 0 });
-            } catch (err) {
-                toast.error("Failed to load payout data");
-            } finally {
-                setLoading(false);
-            }
+                const brRes = await api.get("/branches/my-branch");
+                setBranch(brRes.data);
+                const repRes = await api.get("/reports/branch-sales?type=month");
+                const data = Array.isArray(repRes.data) ? (repRes.data[0] || {}) : repRes.data;
+                const gross = data.totalAmount || 0;
+                setSummary({ earned: gross * 0.85, fee: gross * 0.15 });
+            } catch { setSummary({ earned: 0, fee: 0 }); }
+            finally { setLoading(false); }
         };
-        fetchData();
+        fetch();
     }, []);
 
-    const formatCurrency = (val) => `₹${val.toLocaleString('en-IN')}`;
-
-    // if (!branch) return null; // Removed to prevent blank screen
+    const requestPayout = async () => {
+        if (summary.earned <= 0) return toast.warning("No balance available.");
+        setRequesting(true);
+        try {
+            await api.post("/payouts/request", { amount: summary.earned });
+            toast.success("Payout requested! Funds will transfer in 2-3 business days.");
+        } catch (err) { toast.error(err.response?.data?.error || "Payout request failed"); }
+        finally { setRequesting(false); }
+    };
 
     return (
-        <ManagerLayout title="Payouts" subtitle="Manage your earnings and settlement bank details.">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div style={{ background: '#fff', padding: '2rem', borderRadius: '16px', border: '1px solid #e2e8f0', borderTop: '4px solid #10b981' }}>
-                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>Available for Payout</p>
-                    <h1 style={{ margin: '1rem 0', fontSize: '2.5rem', fontWeight: 800 }}>{formatCurrency(summary.totalAmount * 0.85)}</h1>
-                    <button style={{ padding: '0.75rem 1.5rem', background: '#ea580c', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>
-                        Request Payout
-                    </button>
-                    <p style={{ margin: '1rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>* Platform commission (15%) already deducted.</p>
-                </div>
-
-                <div style={{ background: '#fff', padding: '2rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                    <h3 style={{ margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Wallet size={20} /> Bank Account</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div>
-                            <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Account Holder</p>
-                            <p style={{ margin: '2px 0 0 0', fontWeight: 600 }}>{branch?.bankAccountName || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Account Number</p>
-                            <p style={{ margin: '2px 0 0 0', fontWeight: 600 }}>•••• •••• {branch?.bankAccountNumber?.slice(-4) || 'XXXX'}</p>
-                        </div>
-                        <div>
-                            <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>IFSC Code</p>
-                            <p style={{ margin: '2px 0 0 0', fontWeight: 600 }}>{branch?.bankIfscCode || 'N/A'}</p>
-                        </div>
+        <ManagerLayout>
+            <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+                <div className="flex justify-between items-end mb-10">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Payouts</h1>
+                        <p className="text-base text-slate-500 font-medium">Earnings summary and bank settlement options.</p>
                     </div>
                 </div>
-            </div>
 
-            <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0' }}>
-                    <h3 style={{ margin: 0 }}>Recent Payout History</h3>
+                {loading ? (
+                    <div className="flex justify-center py-20 text-sm text-slate-400">Loading earnings...</div>
+                ) : (
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6 mb-8">
+                        {/* Available */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm box-border">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Available to Settle</span>
+                            <div className="text-4xl font-extrabold text-slate-900 tracking-tighter leading-none">{formatCurrency(summary.earned)}</div>
+                            <button
+                                onClick={requestPayout}
+                                disabled={requesting || summary.earned <= 0}
+                                className="px-4 py-2.5 bg-[#FF5A00] text-white rounded-lg text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-40 w-full"
+                            >
+                                {requesting ? "Processing..." : "Request Payout"}
+                            </button>
+                        </div>
+
+                        {/* Platform Fee */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-4 shadow-sm box-border">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Platform Fee (15%)</span>
+                            <div className="text-4xl font-extrabold text-slate-900 tracking-tighter leading-none">{formatCurrency(summary.fee)}</div>
+                            <div className="text-xs text-slate-400 font-medium">Deducted from gross revenue</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bank Account Panel */}
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm box-border mb-8">
+                    <div className="p-6 border-b border-slate-50 box-border">
+                        <h2 className="text-lg font-bold text-slate-900 m-0">Settlement Account</h2>
+                    </div>
+                    <div className="p-6">
+                        {branch?.bankAccountName ? (
+                            <div className="flex flex-col gap-3">
+                                <div className="grid grid-cols-[160px,1fr] items-center">
+                                    <span className="text-slate-500 text-sm font-medium">Account Holder</span>
+                                    <span className="font-semibold text-slate-900 text-sm">{branch.bankAccountName}</span>
+                                </div>
+                                <div className="grid grid-cols-[160px,1fr] items-center">
+                                    <span className="text-slate-500 text-sm font-medium">Account Number</span>
+                                    <span className="font-semibold text-slate-900 text-sm">•••• {branch.bankAccountNumber?.slice(-4)}</span>
+                                </div>
+                                <div className="grid grid-cols-[160px,1fr] items-center">
+                                    <span className="text-slate-500 text-sm font-medium">IFSC Code</span>
+                                    <span className="font-semibold text-slate-900 text-sm">{branch.bankIfscCode}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-slate-400 font-medium">No bank account linked. Complete your store profile to enable payouts.</p>
+                        )}
+                    </div>
                 </div>
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-                    <Clock size={40} style={{ margin: '0 auto 1rem auto', opacity: 0.5 }} />
-                    <p>You haven't requested any payouts yet. <br /> Your first settlement will appear here after approval.</p>
+
+                {/* Transaction History */}
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-sm box-border">
+                    <div className="p-6 border-b border-slate-50 box-border">
+                        <h2 className="text-lg font-bold text-slate-900 m-0">Transaction History</h2>
+                    </div>
+                    <div className="py-20 flex flex-col items-center justify-center gap-4 text-slate-500 text-base text-center font-medium">
+                        No payout transactions yet.
+                    </div>
                 </div>
             </div>
         </ManagerLayout>

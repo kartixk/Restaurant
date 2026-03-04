@@ -37,6 +37,11 @@ const getSalesReports = async (type) => {
                 lte: end
             }
         },
+        select: {
+            orderTotal: true,
+            createdAt: true,
+            orderType: true
+        },
         orderBy: {
             createdAt: 'desc'
         }
@@ -81,6 +86,11 @@ const getBranchSalesReports = async (branchId, type) => {
                 gte: start,
                 lte: end
             }
+        },
+        select: {
+            orderTotal: true,
+            createdAt: true,
+            orderType: true
         },
         orderBy: {
             createdAt: 'desc'
