@@ -1,5 +1,6 @@
 const prisma = require("../prismaClient");
 const { hashPassword, comparePassword, signToken } = require("./auth");
+const { sendWelcomeEmail, sendManagerWelcomeEmail } = require("../utils/email");
 
 const registerUser = async (data) => {
     const { email, password, name, phone, role = "CUSTOMER" } = data;
@@ -26,6 +27,13 @@ const registerUser = async (data) => {
     });
 
     const token = signToken({ id: user.id, email: user.email, role: user.role });
+
+    // Send Welcome Email
+    if (user.role === "MANAGER") {
+        sendManagerWelcomeEmail(user.email, user.name || "Partner");
+    } else if (user.role === "CUSTOMER") {
+        sendWelcomeEmail(user.email, user.name || "Customer");
+    }
 
     return { user, token };
 };

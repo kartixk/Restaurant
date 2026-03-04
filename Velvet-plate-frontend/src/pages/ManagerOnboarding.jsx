@@ -1,23 +1,18 @@
+// src/pages/ManagerOnboarding.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building, MapPin, RefreshCw, FileText, Store, Upload, Image as ImageIcon, CheckCircle, FileUp, XCircle } from "lucide-react";
-import { toast } from "react-toastify";
-import { ToastContainer } from "react-toastify";
-import { motion } from "framer-motion";
+import { Building, MapPin, RefreshCw, FileText, CheckCircle, FileUp, Image as ImageIcon, ShieldCheck, Landmark, Globe, Smartphone, User, History } from "lucide-react";
+import { toast, ToastContainer } from "react-toastify";
+import { motion, AnimatePresence } from "framer-motion";
 import api from "../api/axios";
 
 export default function ManagerOnboarding({ onComplete }) {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        // Basic Info
         name: "", branchName: "", phone: "",
-
-        // Manager Details
         managerName: "", managerPhone: "", managerAddress: "",
         managerCity: "", managerState: "", managerPincode: "",
         panNumber: "", aadharNumber: "",
-
-        // Location
         address: "", city: "", state: "", pincode: "",
         gstNumber: "", fssaiLicense: "",
         bankAccountName: "", bankAccountNumber: "", bankIfscCode: "",
@@ -32,7 +27,6 @@ export default function ManagerOnboarding({ onComplete }) {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    // Self-redirect if already onboarded
     useEffect(() => {
         const checkStatus = async () => {
             try {
@@ -43,7 +37,7 @@ export default function ManagerOnboarding({ onComplete }) {
                     else if (status === "under_review") navigate("/manager/status");
                 }
             } catch (err) {
-                // 404 is expected for new managers
+                // Expected for new managers
             } finally {
                 setLoading(false);
             }
@@ -55,9 +49,8 @@ export default function ManagerOnboarding({ onComplete }) {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Size check (5MB)
         if (file.size > 5 * 1024 * 1024) {
-            toast.error("File is too large! Maximum size is 5MB.");
+            toast.error("Protocol Error: Payload exceeds 5MB limit.");
             return;
         }
 
@@ -79,9 +72,9 @@ export default function ManagerOnboarding({ onComplete }) {
 
             const urlField = fieldToUrlMap[field];
             setFormData(prev => ({ ...prev, [urlField]: res.data.urls[field] }));
-            toast.success("Document uploaded successfully!");
+            toast.success("Asset Uploaded: Digital twin synchronized.");
         } catch (err) {
-            toast.error(err.response?.data?.error || "Upload failed");
+            toast.error(err.response?.data?.error || "Binary upload failure.");
         } finally {
             setUploading(prev => ({ ...prev, [field]: false }));
         }
@@ -89,23 +82,21 @@ export default function ManagerOnboarding({ onComplete }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Validation: Required documents
-        if (!formData.fssaiPdfUrl) return toast.warning("Please upload FSSAI License PDF");
-        if (!formData.gstPdfUrl) return toast.warning("Please upload GST Certificate PDF");
-        if (!formData.bankPassbookPdfUrl) return toast.warning("Please upload Bank Passbook first page PDF");
-        if (!formData.managerPhotoUrl) return toast.warning("Please upload your profile photo");
+        if (!formData.fssaiPdfUrl) return toast.warning("Compliance Missing: Upload FSSAI License.");
+        if (!formData.gstPdfUrl) return toast.warning("Compliance Missing: Upload GST Certificate.");
+        if (!formData.bankPassbookPdfUrl) return toast.warning("Financials Missing: Upload Bank Verification.");
+        if (!formData.managerPhotoUrl) return toast.warning("Identity Missing: Upload Verification Portrait.");
 
         setSubmitting(true);
         try {
             await api.post("/branches/onboard", formData);
-            toast.success("Store details submitted for review! 🚀");
+            toast.success("Packet Sent: Application is now under audit. 🚀");
             setTimeout(() => {
                 if (onComplete) onComplete();
-                else navigate("/manager/dashboard");
+                else navigate("/manager/status");
             }, 2000);
         } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to submit store details");
+            toast.error(err.response?.data?.error || "Protocol failure: Application submission rejected.");
         } finally {
             setSubmitting(false);
         }
@@ -113,363 +104,280 @@ export default function ManagerOnboarding({ onComplete }) {
 
     const handleChange = (e) => {
         let { name, value } = e.target;
-
-        // Strict Validation Rules
-        if (name === "phone" || name === "managerPhone") {
-            value = value.replace(/\D/g, '').slice(0, 10);
-        } else if (name === "pincode" || name === "managerPincode") {
-            value = value.replace(/\D/g, '').slice(0, 6);
-        } else if (name === "aadharNumber") {
-            value = value.replace(/\D/g, '').slice(0, 12);
-        } else if (name === "panNumber") {
-            value = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
-        } else if (name === "gstNumber") {
-            value = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 15);
-        } else if (name === "fssaiLicense") {
-            value = value.replace(/\D/g, '').slice(0, 14);
-        }
+        if (name === "phone" || name === "managerPhone") value = value.replace(/\D/g, '').slice(0, 10);
+        else if (name === "pincode" || name === "managerPincode") value = value.replace(/\D/g, '').slice(0, 6);
+        else if (name === "aadharNumber") value = value.replace(/\D/g, '').slice(0, 12);
+        else if (name === "panNumber") value = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+        else if (name === "gstNumber") value = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 15);
+        else if (name === "fssaiLicense") value = value.replace(/\D/g, '').slice(0, 14);
 
         setFormData({ ...formData, [name]: value });
     };
 
-    // Component for File Inputs
-    const FileInput = ({ field, label, icon: Icon, type = "pdf", currentUrl }) => (
-        <div style={S.inputGroup}>
-            <label style={S.label}>{label} *</label>
-            <div style={{ position: 'relative' }}>
+    const FileInput = ({ field, label, type = "pdf", currentUrl }) => (
+        <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{label} *</label>
+            <div className="relative group">
                 <input
                     type="file"
                     accept={type === 'pdf' ? 'application/pdf' : 'image/*'}
                     onChange={(e) => handleFileUpload(e, field)}
-                    style={{ display: 'none' }}
+                    className="hidden"
                     id={field}
                 />
                 <label
                     htmlFor={field}
-                    style={{
-                        ...S.fileLabel,
-                        borderColor: uploading[field] ? '#FF5A00' : currentUrl ? '#16A34A' : '#E2E8F0',
-                        background: currentUrl ? '#F0FDF4' : '#F8FAFC'
-                    }}
+                    className={`flex items-center gap-5 p-6 rounded-[32px] border-2 border-dashed cursor-pointer transition-all duration-500 ${uploading[field] ? "border-orange-500 bg-orange-50/20" :
+                        currentUrl ? "border-emerald-500 bg-emerald-50/20" :
+                            "border-slate-100 bg-slate-50/50 hover:bg-white hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/5"
+                        }`}
                 >
-                    {uploading[field] ? (
-                        <RefreshCw size={18} color="#FF5A00" className="spin-slow" />
-                    ) : currentUrl ? (
-                        <CheckCircle size={18} color="#16A34A" />
-                    ) : (
-                        <FileUp size={18} color="#64748B" />
-                    )}
-                    <span style={{ color: currentUrl ? '#16A34A' : '#475569', fontWeight: 600, fontSize: '0.85rem' }}>
-                        {uploading[field] ? 'Uploading...' : currentUrl ? 'Document Attached' : 'Choose File'}
-                    </span>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${currentUrl ? "bg-emerald-100 text-emerald-600 shadow-lg shadow-emerald-500/10" : "bg-white text-slate-300 shadow-sm border border-slate-50"
+                        }`}>
+                        {uploading[field] ? <RefreshCw size={24} className="animate-spin text-orange-500" /> :
+                            currentUrl ? <CheckCircle size={24} /> : <FileUp size={24} />}
+                    </div>
+                    <div>
+                        <p className={`text-[13px] font-black tracking-tight uppercase ${currentUrl ? "text-emerald-700" : "text-slate-900"}`}>
+                            {uploading[field] ? 'Uploading Binary...' : currentUrl ? 'Asset Locked' : 'Select Payload'}
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                            {type === 'pdf' ? 'PDF (MAX 5MB)' : 'IMAGE (MAX 5MB)'}
+                        </p>
+                    </div>
                 </label>
             </div>
         </div>
     );
 
-    // Animation variants
-    const containerVariants = {
-        hidden: { opacity: 0, y: 30 },
-        visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 20, staggerChildren: 0.1 } }
-    };
-
-    const itemVariants = {
-        hidden: { opacity: 0, y: 15 },
-        visible: { opacity: 1, y: 0 }
-    };
-
-    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#FF5A00' }}><RefreshCw className="spin" /></div>;
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center h-screen bg-slate-900 gap-6">
+            <RefreshCw className="animate-spin text-orange-500" size={48} />
+            <p className="text-[10px] font-black text-white uppercase tracking-[0.4em] opacity-40">Compiling Onboarding Environment...</p>
+        </div>
+    );
 
     return (
-        <div style={S.container}>
+        <div className="min-h-screen bg-white relative overflow-hidden py-24 px-8 font-sans">
+            {/* Dynamic Mesh Gradient Background */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden grayscale-[0.2]">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-100/30 rounded-full blur-[120px] animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-slate-100/50 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '2s' }} />
+                <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-emerald-100/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '4s' }} />
+            </div>
+
             <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
-            <div style={S.animatedBackground}></div>
-            <motion.div style={S.blob1} animate={{ y: [0, -20, 0], x: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }} />
-            <motion.div style={S.blob2} animate={{ y: [0, 30, 0], x: [0, -20, 0] }} transition={{ repeat: Infinity, duration: 10, ease: "easeInOut" }} />
-
             <motion.div
-                style={S.card}
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
+                initial={{ opacity: 0, y: 60 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="relative z-10 bg-white w-full max-w-6xl mx-auto rounded-[60px] border border-slate-200 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] overflow-hidden"
             >
-                <div style={S.header}>
-                    <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800, color: "#0F172A", letterSpacing: "-0.03em" }}>Partner Onboarding</h1>
-                    <p style={{ color: "#64748B", margin: "0.5rem 0 0 0", fontWeight: 500 }}>Submit your legal and business profile for verification.</p>
+                {/* Header Branding */}
+                <div className="p-16 border-b border-slate-50 text-center bg-slate-50/50 relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, black 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+                    <div className="relative z-10">
+                        <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-2xl flex items-center justify-center mx-auto mb-8 border-4 border-white rotate-3 group hover:rotate-0 transition-transform duration-500">
+                            <Building size={36} className="text-orange-500" />
+                        </div>
+                        <h1 className="text-5xl font-black text-slate-950 tracking-tighter mb-4">Partner Application</h1>
+                        <p className="text-slate-400 font-medium italic text-sm max-w-xl mx-auto">
+                            Initiate your digital presence on the Velvet Plate Global Network. Please provide precise entity coordinates and compliance credentials.
+                        </p>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ padding: "2.5rem 3rem" }}>
-
+                <form onSubmit={handleSubmit} className="p-12 lg:p-24 space-y-24">
                     {/* Basic Info */}
-                    <motion.div variants={itemVariants}>
-                        <h3 style={{ ...S.sectionTitle, marginTop: 0 }}><Building size={20} color="#FF5A00" /> Basic Information</h3>
-                        <div style={S.grid2}>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>Restaurant Name *</label>
-                                <input type="text" name="name" value={formData.name} onChange={handleChange} required style={S.input} placeholder="e.g. KFC" />
+                    <section>
+                        <div className="flex items-center gap-6 mb-12 overflow-hidden">
+                            <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] shrink-0 flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-2xl bg-orange-600 text-white flex items-center justify-center shadow-lg shadow-orange-600/20"><Building size={18} /></div>
+                                Entity Foundation
+                            </h3>
+                            <div className="h-px bg-slate-100 w-full" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Restaurant Identity *</label>
+                                <input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-[32px] text-[15px] font-black text-slate-950 placeholder:text-slate-300 focus:bg-white focus:border-orange-500 focus:ring-[12px] focus:ring-orange-500/5 transition-all outline-none shadow-inner" placeholder="Velvet Plate Elite" />
                             </div>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>Branch Area *</label>
-                                <input type="text" name="branchName" value={formData.branchName} onChange={handleChange} required style={S.input} placeholder="e.g. Downtown" />
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Primary Deployment Zone *</label>
+                                <input type="text" name="branchName" value={formData.branchName} onChange={handleChange} required className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-[32px] text-[15px] font-black text-slate-950 focus:bg-white focus:border-orange-500 focus:ring-[12px] focus:ring-orange-500/5 transition-all outline-none shadow-inner" placeholder="Cyber City Hub" />
                             </div>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>Restaurant Phone *</label>
-                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required style={S.input} placeholder="+91 10-digit number" />
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Business Comms Hub *</label>
+                                <div className="relative">
+                                    <Smartphone className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                                    <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className="w-full pl-20 pr-8 py-6 bg-slate-50 border border-slate-100 rounded-[32px] text-[15px] font-black text-slate-950 focus:bg-white focus:border-orange-500 focus:ring-[12px] focus:ring-orange-500/5 transition-all outline-none shadow-inner" placeholder="10-digit number" />
+                                </div>
                             </div>
                         </div>
+                    </section>
 
-                        {/* Manager Details */}
-                        <h4 style={{ ...S.sectionTitle, fontSize: "1rem", marginTop: "1.5rem", color: "#475569" }}>Manager Details</h4>
-                        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap-reverse' }}>
-                            <div style={{ flex: 1, minWidth: '300px' }}>
-                                <div style={S.grid2}>
-                                    <div style={S.inputGroup}>
-                                        <label style={S.label}>Manager Full Name *</label>
-                                        <input type="text" name="managerName" value={formData.managerName} onChange={handleChange} required style={S.input} placeholder="John Doe" />
+                    {/* Manager Details */}
+                    <section>
+                        <div className="flex items-center gap-6 mb-12 overflow-hidden">
+                            <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] shrink-0 flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg"><User size={18} /></div>
+                                Governance & Identity
+                            </h3>
+                            <div className="h-px bg-slate-100 w-full" />
+                        </div>
+                        <div className="flex flex-col xl:flex-row gap-16 items-start">
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-10">
+                                {[
+                                    { label: "Designated Manager Name", name: "managerName", type: "text", ph: "Full Legal Name" },
+                                    { label: "Personal Mobile Uplink", name: "managerPhone", type: "tel", ph: "Mobile Number" },
+                                    { label: "PAN Identificator", name: "panNumber", type: "text", ph: "ABCDE1234F" },
+                                    { label: "Aadhar Bio-Ref", name: "aadharNumber", type: "text", ph: "12-digit UID" },
+                                ].map((field) => (
+                                    <div key={field.name} className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{field.label} *</label>
+                                        <input type={field.type} name={field.name} value={formData[field.name]} onChange={handleChange} required className="w-full px-8 py-5 bg-white border border-slate-200 rounded-[24px] text-sm font-black text-slate-950 focus:border-slate-900 transition-all outline-none shadow-sm uppercase placeholder:normal-case placeholder:font-medium placeholder:text-slate-300" placeholder={field.ph} />
                                     </div>
-                                    <div style={S.inputGroup}>
-                                        <label style={S.label}>Manager Phone *</label>
-                                        <input type="tel" name="managerPhone" value={formData.managerPhone} onChange={handleChange} required style={S.input} placeholder="10-digit number" />
-                                    </div>
-                                    <div style={S.inputGroup}>
-                                        <label style={S.label}>Manager PAN Number *</label>
-                                        <input type="text" name="panNumber" value={formData.panNumber} onChange={handleChange} required style={S.input} placeholder="ABCDE1234F" />
-                                    </div>
-                                    <div style={S.inputGroup}>
-                                        <label style={S.label}>Manager Aadhar Number *</label>
-                                        <input type="text" name="aadharNumber" value={formData.aadharNumber} onChange={handleChange} required style={S.input} placeholder="12-digit number" />
-                                    </div>
-                                </div>
-
-                                <div style={{ ...S.inputGroup, marginTop: '1.5rem', marginBottom: '1.5rem' }}>
-                                    <label style={S.label}>Manager Full Address *</label>
-                                    <input type="text" name="managerAddress" value={formData.managerAddress} onChange={handleChange} required style={S.input} placeholder="Apt, Street, Landmark..." />
-                                </div>
-
-                                <div style={{ ...S.grid2, gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-                                    <div style={S.inputGroup}>
-                                        <label style={S.label}>Manager City *</label>
-                                        <input type="text" name="managerCity" value={formData.managerCity} onChange={handleChange} required style={S.input} placeholder="City Name" />
-                                    </div>
-                                    <div style={S.inputGroup}>
-                                        <label style={S.label}>Manager State *</label>
-                                        <input type="text" name="managerState" value={formData.managerState} onChange={handleChange} required style={S.input} placeholder="State" />
-                                    </div>
-                                    <div style={S.inputGroup}>
-                                        <label style={S.label}>Pincode *</label>
-                                        <input type="text" name="managerPincode" value={formData.managerPincode} onChange={handleChange} required style={S.input} placeholder="XXXXXX" />
-                                    </div>
-                                </div>
+                                ))}
                             </div>
 
                             {/* Manager Profile Photo */}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '1.5rem', minWidth: '150px' }}>
-                                <label style={{ ...S.label, marginBottom: '0.5rem' }}>PROFILE PHOTO *</label>
+                            <div className="flex flex-col items-center shrink-0">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Identity Capture *</label>
                                 <label
                                     htmlFor="managerPhoto"
-                                    style={{
-                                        ...S.logo,
-                                        width: '120px', height: '120px',
-                                        background: formData.managerPhotoUrl ? `url(${formData.managerPhotoUrl}) center/cover` : '#FFF7F5',
-                                        border: formData.managerPhotoUrl ? '2px solid #FF5A00' : '2px dashed #FFD8CC',
-                                        margin: 0, cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        transition: 'all 0.3s ease'
-                                    }}
+                                    className={`w-56 h-56 rounded-[48px] border-4 border-dashed flex items-center justify-center overflow-hidden relative group cursor-pointer transition-all duration-700 hover:rotate-2 shadow-2xl ${formData.managerPhotoUrl ? "border-emerald-500 bg-emerald-50/30" : "border-slate-100 bg-slate-50"}`}
                                 >
-                                    <input type="file" accept="image/*" id="managerPhoto" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'managerPhoto')} />
+                                    <input type="file" accept="image/*" id="managerPhoto" className="hidden" onChange={(e) => handleFileUpload(e, 'managerPhoto')} />
                                     {uploading.managerPhoto ? (
-                                        <div style={{ background: 'rgba(255,255,255,0.7)', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <RefreshCw size={24} color="#FF5A00" className="spin" />
-                                        </div>
-                                    ) : !formData.managerPhotoUrl && (
-                                        <div style={{ textAlign: 'center' }}>
-                                            <ImageIcon size={32} color="#FF5A00" style={{ opacity: 0.5 }} />
-                                            <p style={{ fontSize: '0.65rem', color: '#FF5A00', margin: '4px 0 0', fontWeight: 700 }}>UPLOAD</p>
+                                        <RefreshCw size={40} className="animate-spin text-orange-500" />
+                                    ) : formData.managerPhotoUrl ? (
+                                        <>
+                                            <img src={formData.managerPhotoUrl} alt="Manager" className="w-full h-full object-cover grayscale-[0.2] transition-all group-hover:grayscale-0" />
+                                            <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><CheckCircle size={48} className="text-white" /></div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center p-8">
+                                            <ImageIcon size={40} className="text-slate-200 mx-auto mb-4 group-hover:text-orange-500 transition-all duration-500 group-hover:scale-110" />
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Upload <br /> PORTRAIT</p>
                                         </div>
                                     )}
                                 </label>
                             </div>
                         </div>
-                    </motion.div>
+                    </section>
 
-                    <div style={S.divider}></div>
-
-                    {/* Location */}
-                    <motion.div variants={itemVariants}>
-                        <h3 style={S.sectionTitle}><MapPin size={20} color="#FF5A00" /> Location Details</h3>
-                        <div style={{ ...S.inputGroup, marginBottom: '1.5rem' }}>
-                            <label style={S.label}>Full Address *</label>
-                            <input type="text" name="address" value={formData.address} onChange={handleChange} required style={S.input} placeholder="Street, Building, Landmark..." />
+                    {/* Geography */}
+                    <section className="bg-slate-900 rounded-[56px] p-16 text-white shadow-3xl shadow-slate-950/20 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-16 opacity-[0.05] pointer-events-none">
+                            <Globe size={300} />
                         </div>
-                        <div style={{ ...S.grid2, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>City *</label>
-                                <input type="text" name="city" value={formData.city} onChange={handleChange} required style={S.input} placeholder="City Name" />
-                            </div>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>State *</label>
-                                <input type="text" name="state" value={formData.state} onChange={handleChange} required style={S.input} placeholder="State" />
-                            </div>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>Pincode *</label>
-                                <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} required style={S.input} placeholder="XXXXXX" />
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    <div style={S.divider}></div>
-
-                    {/* Operations */}
-                    <motion.div variants={itemVariants}>
-                        <h3 style={S.sectionTitle}><RefreshCw size={20} color="#FF5A00" /> Operations</h3>
-                        <div style={S.grid2}>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>Opening Time *</label>
-                                <input type="time" name="openTime" value={formData.openTime} onChange={handleChange} required style={S.input} />
-                            </div>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>Closing Time *</label>
-                                <input type="time" name="closeTime" value={formData.closeTime} onChange={handleChange} required style={S.input} />
+                        <div className="relative z-10">
+                            <h3 className="text-[11px] font-black text-orange-500 uppercase tracking-[0.3em] mb-12 flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-white"><MapPin size={18} /></div>
+                                GEO-Spatial Location
+                            </h3>
+                            <div className="space-y-12">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Headquarters Address *</label>
+                                    <input type="text" name="address" value={formData.address} onChange={handleChange} required className="w-full px-10 py-7 bg-white/5 border border-white/10 rounded-[32px] text-[15px] font-black text-white focus:bg-white/10 focus:border-orange-500 transition-all outline-none" placeholder="Suite, Building, Floor..." />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                                    {[
+                                        { label: "City Zone", name: "city" },
+                                        { label: "State Protocol", name: "state" },
+                                        { label: "Pincode Ref", name: "pincode" },
+                                    ].map((field) => (
+                                        <div key={field.name} className="space-y-3">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">{field.label} *</label>
+                                            <input type="text" name={field.name} value={formData[field.name]} onChange={handleChange} required className="w-full px-8 py-5 bg-white/5 border border-white/10 rounded-[24px] text-sm font-black text-white focus:border-orange-500 transition-all outline-none" />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </motion.div>
+                    </section>
 
-                    <div style={S.divider}></div>
-
-                    {/* Legal & Bank */}
-                    <motion.div variants={itemVariants}>
-                        <h3 style={S.sectionTitle}><FileText size={20} color="#FF5A00" /> Legal & Banking Documents</h3>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                            <div style={{ ...S.inputGroup }}>
-                                <label style={S.label}>FSSAI License Number *</label>
-                                <input type="text" name="fssaiLicense" value={formData.fssaiLicense} onChange={handleChange} required style={S.input} placeholder="14-digit FSSAI Number" />
+                    {/* Legal & Finance */}
+                    <section className="space-y-24">
+                        <div>
+                            <div className="flex items-center gap-6 mb-12 overflow-hidden">
+                                <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] shrink-0 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shadow-sm"><ShieldCheck size={18} /></div>
+                                    Compliance Protocol
+                                </h3>
+                                <div className="h-px bg-slate-100 w-full" />
                             </div>
-                            <FileInput field="fssaiDoc" label="FSSAI License Document (PDF)" currentUrl={formData.fssaiPdfUrl} />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
-                            <div style={{ ...S.inputGroup }}>
-                                <label style={S.label}>GST Number *</label>
-                                <input type="text" name="gstNumber" value={formData.gstNumber} onChange={handleChange} required style={S.input} placeholder="15-digit GST Number" />
-                            </div>
-                            <FileInput field="gstDoc" label="GST Certificate (PDF)" currentUrl={formData.gstPdfUrl} />
-                        </div>
-
-                        <div style={S.subDivider}></div>
-
-                        <div style={{ ...S.grid2, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>Account Holder Name *</label>
-                                <input type="text" name="bankAccountName" value={formData.bankAccountName} onChange={handleChange} required style={S.input} placeholder="Name on Bank Account" />
-                            </div>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>Account Number *</label>
-                                <input type="text" name="bankAccountNumber" value={formData.bankAccountNumber} onChange={handleChange} required style={S.input} placeholder="Account Number" />
-                            </div>
-                            <div style={S.inputGroup}>
-                                <label style={S.label}>IFSC Code *</label>
-                                <input type="text" name="bankIfscCode" value={formData.bankIfscCode} onChange={handleChange} required style={S.input} placeholder="IFSC Code" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+                                <div className="space-y-10">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">FSSAI MASTER LICENSE *</label>
+                                        <input type="text" name="fssaiLicense" value={formData.fssaiLicense} onChange={handleChange} required className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-[28px] text-[15px] font-black text-slate-950 focus:border-orange-600 transition-all outline-none" placeholder="14-digit number" />
+                                    </div>
+                                    <FileInput field="fssaiDoc" label="FSSAI Digital Twin (PDF)" currentUrl={formData.fssaiPdfUrl} />
+                                </div>
+                                <div className="space-y-10">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">GSTIN TAX DESIGNATOR *</label>
+                                        <input type="text" name="gstNumber" value={formData.gstNumber} onChange={handleChange} required className="w-full px-8 py-6 bg-slate-50 border border-slate-100 rounded-[28px] text-[15px] font-black text-slate-950 focus:border-orange-600 transition-all outline-none uppercase" placeholder="15-digit code" />
+                                    </div>
+                                    <FileInput field="gstDoc" label="GSTN Certificate (PDF)" currentUrl={formData.gstPdfUrl} />
+                                </div>
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '1.5rem' }}>
-                            <FileInput field="bankPassbook" label="Bank Passbook / Statement (PDF)" currentUrl={formData.bankPassbookPdfUrl} />
+                        <div className="bg-slate-50 p-16 rounded-[60px] border border-slate-100 space-y-16">
+                            <h4 className="text-xl font-black tracking-tighter flex items-center gap-4 text-slate-950">
+                                <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-xl flex items-center justify-center text-orange-600 font-extrabold italic">₹</div>
+                                Bank Settlement Architecture
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                {[
+                                    { label: "Vault Beneficiary Name", name: "bankAccountName", ph: "Bank Account Holder Name" },
+                                    { label: "Vault Serial Number", name: "bankAccountNumber", ph: "Full Bank Account Number" },
+                                    { label: "IFSC Regional Protocol", name: "bankIfscCode", ph: "Bank IFSC Code" },
+                                ].map((field) => (
+                                    <div key={field.name} className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{field.label} *</label>
+                                        <input type="text" name={field.name} value={formData[field.name]} onChange={handleChange} required className="w-full px-8 py-6 bg-white border border-slate-200 rounded-[28px] text-sm font-black text-slate-950 focus:border-slate-900 transition-all outline-none" placeholder={field.ph} />
+                                    </div>
+                                ))}
+                                <FileInput field="bankPassbook" label="Settlement Verification (PDF)" currentUrl={formData.bankPassbookPdfUrl} />
+                            </div>
                         </div>
-                    </motion.div>
+                    </section>
 
-                    <motion.button
-                        type="submit"
-                        disabled={submitting}
-                        style={{ ...S.btnSubmit, opacity: submitting ? 0.7 : 1 }}
-                        whileHover={!submitting ? { scale: 1.02, boxShadow: "0 10px 20px -5px rgba(255, 90, 0, 0.4)" } : {}}
-                        whileTap={!submitting ? { scale: 0.98 } : {}}
-                    >
-                        {submitting ? <RefreshCw className="spin" size={24} /> : "Submit Profile for Review"}
-                    </motion.button>
+                    <div className="pt-12 text-center space-y-8">
+                        <div className="flex items-center justify-center gap-6 opacity-40">
+                            <History size={16} />
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">Estimated Audit Duration: 24-48 Production Hours</p>
+                        </div>
+
+                        <motion.button
+                            type="submit"
+                            disabled={submitting}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className={`w-full group relative p-10 rounded-[40px] text-sm font-black uppercase tracking-[0.4em] shadow-3xl overflow-hidden transition-all flex items-center justify-center gap-6 ${submitting ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-slate-900 text-white shadow-slate-900/40 hover:bg-orange-600 hover:shadow-orange-500/30"}`}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none" />
+                            {submitting ? <RefreshCw className="animate-spin" size={28} /> : (
+                                <>
+                                    <Landmark size={24} className="group-hover:scale-125 transition-transform" />
+                                    FINALIZE & BROADCAST APPLICATION
+                                </>
+                            )}
+                        </motion.button>
+                    </div>
                 </form>
             </motion.div>
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @keyframes shimmer {
+                    100% { transform: translateX(100%); }
+                }
+            `}} />
         </div>
     );
 }
-
-// Daylight & Flame Styles
-const S = {
-    container: {
-        minHeight: "100vh", backgroundColor: "#F8FAFC", padding: "4rem 1rem",
-        display: "flex", justifyContent: "center", alignItems: "flex-start",
-        fontFamily: "'Inter', sans-serif", position: "relative", overflowX: "hidden"
-    },
-    animatedBackground: {
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 50%, #FFF7F5 100%)', zIndex: 0
-    },
-    blob1: {
-        position: 'fixed', top: '5%', left: '10%', width: '400px', height: '400px',
-        background: 'radial-gradient(circle, rgba(255, 90, 0, 0.05) 0%, rgba(255,255,255,0) 70%)',
-        borderRadius: '50%', filter: 'blur(40px)', zIndex: 1
-    },
-    blob2: {
-        position: 'fixed', bottom: '5%', right: '10%', width: '500px', height: '500px',
-        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, rgba(255,255,255,0) 70%)',
-        borderRadius: '50%', filter: 'blur(60px)', zIndex: 1
-    },
-    card: {
-        background: "#FFFFFF", width: "100%", maxWidth: "850px", borderRadius: "24px",
-        border: "1px solid #E2E8F0", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01)",
-        overflow: "hidden", position: "relative", zIndex: 10
-    },
-    header: {
-        padding: "2.5rem 2rem", borderBottom: "1px solid #F1F5F9", textAlign: "center", background: "#FFFFFF"
-    },
-    logo: {
-        width: "64px", height: "64px", borderRadius: "16px", backgroundColor: "#FFF7F5", border: "1px solid #FFD8CC",
-        display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem auto",
-        backgroundSize: 'cover', backgroundPosition: 'center'
-    },
-    sectionTitle: {
-        fontSize: "1.25rem", fontWeight: 800, margin: "0 0 1.5rem 0", color: "#0F172A",
-        display: "flex", alignItems: "center", gap: "0.5rem", letterSpacing: "-0.01em"
-    },
-    subDivider: {
-        height: "1px", width: "100%", backgroundColor: "#F1F5F9", margin: "1.5rem 0", borderStyle: "dashed"
-    },
-    fileLabel: {
-        display: "flex", alignItems: "center", gap: "0.75rem", padding: "12px 16px",
-        borderRadius: "10px", border: "2px dashed #E2E8F0", backgroundColor: "#F8FAFC",
-        cursor: "pointer", transition: "all 0.2s ease", width: "100%"
-    },
-    photoBadge: {
-        position: 'absolute', bottom: '0', right: '0', background: '#FF5A00',
-        width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #fff',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-        cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', transition: 'transform 0.2s'
-    },
-    divider: {
-        height: "1px", width: "100%", backgroundColor: "#F1F5F9", margin: "2.5rem 0"
-    },
-    grid2: {
-        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1.5rem"
-    },
-    inputGroup: {
-        display: "flex", flexDirection: "column", gap: "0.5rem"
-    },
-    label: {
-        fontSize: "0.75rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em"
-    },
-    input: {
-        padding: "12px 16px", borderRadius: "10px", border: "1px solid #E2E8F0", backgroundColor: "#F8FAFC",
-        color: "#0F172A", fontWeight: 500, outline: "none", fontSize: "0.95rem", transition: "all 0.2s"
-    },
-    btnSubmit: {
-        width: "100%", padding: "16px", background: "#FF5A00", color: "#FFFFFF", border: "none",
-        borderRadius: "12px", fontSize: "1.05rem", fontWeight: 800, cursor: "pointer",
-        margin: "3rem auto 0 auto", display: "flex", justifyContent: "center", alignItems: "center", transition: "all 0.2s"
-    },
-    loader: {
-        width: '24px', height: '24px', border: '3px solid rgba(255,255,255,0.3)',
-        borderRadius: '50%', borderTopColor: '#fff', animation: 'spin 1s ease-in-out infinite'
-    }
-};

@@ -5,10 +5,11 @@ const productSchema = z.object({
     description: z.string().optional(),
     price: z.preprocess((val) => Number(val), z.number().positive("Price must be a positive number")),
     category: z.string().min(1, "Category is required"),
+    dietType: z.string().optional(),
     isAvailable: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
     quantity: z.preprocess((val) => Number(val), z.number().int().nonnegative("Quantity cannot be negative")).optional(),
     imageUrl: z.string().url("Invalid image URL"),
-    branchId: z.string().length(24, "Invalid Branch ID")
+    branchId: z.string().length(24, "Invalid Branch ID").nullable().optional()
 });
 
 const productUpdateSchema = z.object({
@@ -16,6 +17,7 @@ const productUpdateSchema = z.object({
     description: z.string().optional(),
     price: z.preprocess((val) => Number(val), z.number().positive()).optional(),
     category: z.string().min(1).optional(),
+    dietType: z.string().optional(),
     isAvailable: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
     quantity: z.preprocess((val) => Number(val), z.number().int().nonnegative()).optional(),
     imageUrl: z.string().url().optional(),

@@ -68,25 +68,40 @@ export default function Products() {
   });
 
   return (
-    <div style={styles.container}>
+    <div className="bg-slate-50 min-h-screen p-6 md:p-12 font-sans">
       <ToastContainer position="top-right" autoClose={2000} theme="dark" />
 
       {/* --- PREMIUM HERO SECTION --- */}
-      <section style={styles.heroSection}>
-        <motion.h1 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={styles.heroTitle}>
-          Crave It. <span style={{ color: '#FF5A00' }}>Order It.</span>
+      <section className="flex flex-col items-center mb-16 pt-8">
+        <motion.h1
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter mb-10 text-center leading-[0.9] max-w-2xl"
+        >
+          Crave It. <span className="text-orange-600 block md:inline">Order It.</span>
         </motion.h1>
 
         {/* QSR ORDER TYPE TOGGLE */}
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }} style={styles.toggleContainer}>
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="flex bg-white p-1.5 rounded-2xl mb-12 border border-slate-200 shadow-sm"
+        >
           <button
-            style={{ ...styles.toggleBtn, ...(orderType === 'DINE_IN' ? styles.toggleActive : {}) }}
+            className={`flex-1 px-8 py-3 rounded-xl text-sm font-black transition-all duration-300 ${orderType === 'DINE_IN'
+                ? "bg-orange-600 text-white shadow-lg shadow-orange-600/20"
+                : "text-slate-500 hover:text-slate-700"
+              }`}
             onClick={() => setOrderType('DINE_IN')}
           >
             🍽️ Dine-in
           </button>
           <button
-            style={{ ...styles.toggleBtn, ...(orderType === 'TAKEAWAY' ? styles.toggleActive : {}) }}
+            className={`flex-1 px-8 py-3 rounded-xl text-sm font-black transition-all duration-300 ${orderType === 'TAKEAWAY'
+                ? "bg-orange-600 text-white shadow-lg shadow-orange-600/20"
+                : "text-slate-500 hover:text-slate-700"
+              }`}
             onClick={() => setOrderType('TAKEAWAY')}
           >
             🛍️ Takeaway
@@ -94,20 +109,30 @@ export default function Products() {
         </motion.div>
 
         {/* SEARCH & FILTERS */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} style={styles.filterBar}>
-          <input
-            type="text"
-            placeholder="Search the menu..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={styles.searchInput}
-          />
-          <div style={styles.categoryScroller}>
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="w-full max-w-5xl flex flex-col gap-6"
+        >
+          <div className="relative group">
+            <input
+              type="text"
+              placeholder="Search our delicious menu..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-8 py-5 rounded-[2rem] bg-white border border-slate-200 text-slate-900 text-lg outline-none shadow-sm focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all font-medium"
+            />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
             {uniqueCategories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                style={{ ...styles.catPill, ...(selectedCategory === cat ? styles.catPillActive : {}) }}
+                className={`px-6 py-2.5 rounded-full border font-black text-[10px] uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${selectedCategory === cat
+                    ? "bg-slate-950 text-white border-slate-950 shadow-lg shadow-slate-950/20"
+                    : "bg-white text-slate-400 border-slate-200 hover:border-slate-400"
+                  }`}
               >
                 {cat}
               </button>
@@ -117,47 +142,83 @@ export default function Products() {
       </section>
 
       {/* --- MENU GRID --- */}
-      <motion.div style={styles.grid} initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
+      <motion.div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-[1600px] margin-0-auto"
+        initial="hidden"
+        animate="show"
+        variants={{ show: { transition: { staggerChildren: 0.05 } } }}
+      >
         <AnimatePresence>
           {filteredProducts.map((product) => (
             <motion.div
               key={product._id || product.id}
               variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
-              whileHover={{ y: -5 }}
-              style={styles.card}
+              whileHover={{ y: -8 }}
+              className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 flex flex-col shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-300/50 transition-all duration-500 group"
             >
-              <div style={styles.imageWrapper}>
-                <img src={product.imageUrl} alt={product.name} style={styles.image} />
-                {!product.isAvailable && <div style={styles.soldOutBadge}>Sold Out</div>}
+              <div className="relative aspect-[16/11] bg-slate-100 overflow-hidden">
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                {!product.isAvailable && (
+                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md text-red-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl">
+                    Sold Out
+                  </div>
+                )}
+                {product.dietType && (
+                  <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md p-1.5 rounded-lg shadow-xl ring-1 ring-black/5">
+                    <div className={`w-3.5 h-3.5 border ${product.dietType === 'Veg' ? 'border-emerald-600' : product.dietType === 'Non-Veg' ? 'border-red-600' : 'border-amber-600'
+                      } rounded-sm p-[1.5px] flex items-center justify-center`}>
+                      <div className={`w-full h-full rounded-full ${product.dietType === 'Veg' ? 'bg-emerald-600' : product.dietType === 'Non-Veg' ? 'bg-red-600' : 'bg-amber-600'
+                        }`} />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div style={styles.cardContent}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <h3 style={styles.productName}>{product.name}</h3>
-                  <span style={styles.price}>₹{product.price}</span>
+              <div className="p-8 flex flex-col flex-1">
+                <div className="flex justify-between items-start gap-4 mb-3">
+                  <h3 className="text-xl font-black text-slate-950 tracking-tight leading-tight m-0">{product.name}</h3>
+                  <span className="text-xl font-black text-orange-600 leading-none">₹{product.price}</span>
                 </div>
 
-                <p style={styles.description}>{product.description || "Premium quality ingredients crafted to perfection."}</p>
+                <p className="text-slate-400 font-medium text-xs leading-relaxed mb-8 flex-1">
+                  {product.description || "Premium quality ingredients crafted to perfection with our signature house style."}
+                </p>
 
                 {role !== "admin" && role !== "manager" && (
-                  <div style={styles.actionRow}>
+                  <div className="flex justify-between items-center gap-4 mt-auto">
                     {product.isAvailable !== false ? (
                       <>
-                        <div style={styles.stepper}>
-                          <button onClick={() => handleQuantityChange(product._id || product.id, -1, 99)} style={styles.stepBtn}>-</button>
-                          <span style={styles.stepText}>{quantities[product._id || product.id] || 1}</span>
-                          <button onClick={() => handleQuantityChange(product._id || product.id, 1, 99)} style={styles.stepBtn}>+</button>
+                        <div className="flex items-center bg-slate-50 p-1.5 rounded-xl ring-1 ring-slate-100 ring-inset">
+                          <button
+                            onClick={() => handleQuantityChange(product._id || product.id, -1, 99)}
+                            className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-slate-950 hover:bg-white rounded-lg font-black transition-all text-xl"
+                          >
+                            -
+                          </button>
+                          <span className="w-8 text-center text-slate-950 font-black text-sm">{quantities[product._id || product.id] || 1}</span>
+                          <button
+                            onClick={() => handleQuantityChange(product._id || product.id, 1, 99)}
+                            className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-slate-950 hover:bg-white rounded-lg font-black transition-all text-xl"
+                          >
+                            +
+                          </button>
                         </div>
                         <motion.button
                           onClick={() => handleAddToCart(product)}
-                          style={styles.addBtn}
+                          className="flex-1 py-4 bg-orange-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-orange-700 transition-all shadow-xl shadow-orange-600/20 active:scale-95 whitespace-nowrap"
                           whileTap={{ scale: 0.95 }}
                         >
-                          Add +
+                          Add to Cart
                         </motion.button>
                       </>
                     ) : (
-                      <button style={styles.disabledBtn} disabled>Currently Unavailable</button>
+                      <button className="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest cursor-not-allowed" disabled>
+                        Out of Stock
+                      </button>
                     )}
                   </div>
                 )}
@@ -169,38 +230,3 @@ export default function Products() {
     </div>
   );
 }
-
-// Inline Styles for the Midnight & Flame Design System
-const styles = {
-  container: { backgroundColor: '#F8FAFC', minHeight: '100vh', padding: '2rem', fontFamily: "'Inter', sans-serif" },
-  heroSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '3rem', paddingTop: '2rem' },
-  heroTitle: { fontSize: '3.5rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em', marginBottom: '2rem', textAlign: 'center' },
-
-  toggleContainer: { display: 'flex', background: '#FFFFFF', padding: '6px', borderRadius: '12px', marginBottom: '2rem', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
-  toggleBtn: { flex: 1, padding: '12px 32px', border: 'none', background: 'transparent', color: '#64748B', fontSize: '1rem', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' },
-  toggleActive: { background: '#FF5A00', color: '#FFFFFF', boxShadow: '0 4px 12px rgba(255, 90, 0, 0.3)' },
-
-  filterBar: { width: '100%', maxWidth: '1000px', display: 'flex', flexDirection: 'column', gap: '1rem' },
-  searchInput: { width: '100%', padding: '16px 24px', borderRadius: '12px', background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: '1rem', outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' },
-  categoryScroller: { display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none' },
-  catPill: { padding: '8px 20px', borderRadius: '100px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#64748B', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' },
-  catPillActive: { background: '#0F172A', color: '#FFFFFF', border: '1px solid #0F172A' },
-
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem', maxWidth: '1400px', margin: '0 auto' },
-  card: { background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02)' },
-  imageWrapper: { position: 'relative', width: '100%', paddingTop: '65%', backgroundColor: '#F1F5F9' },
-  image: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' },
-  soldOutBadge: { position: 'absolute', top: '12px', right: '12px', background: '#FFFFFF', color: '#EF4444', padding: '6px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '0.8rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' },
-
-  cardContent: { padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1 },
-  productName: { fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0', letterSpacing: '-0.02em' },
-  price: { fontSize: '1.25rem', fontWeight: 800, color: '#FF5A00' },
-  description: { color: '#64748B', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '1.5rem', flex: 1 },
-
-  actionRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' },
-  stepper: { display: 'flex', alignItems: 'center', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' },
-  stepBtn: { width: '36px', height: '36px', background: 'transparent', border: 'none', color: '#0F172A', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 600 },
-  stepText: { width: '24px', textAlign: 'center', color: '#0F172A', fontWeight: 700 },
-  addBtn: { flex: 1, padding: '12px', background: '#FF5A00', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 10px rgba(255, 90, 0, 0.2)' },
-  disabledBtn: { flex: 1, padding: '12px', background: '#F1F5F9', color: '#94A3B8', border: 'none', borderRadius: '8px', fontWeight: 700 }
-};

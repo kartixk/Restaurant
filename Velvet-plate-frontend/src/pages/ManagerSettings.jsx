@@ -1,132 +1,65 @@
 // src/pages/ManagerSettings.jsx
-import React from 'react';
-import useAuthStore from '../store/useAuthStore';
-import ManagerLayout from '../components/ManagerLayout';
-import { User, Mail, ShieldCheck } from 'lucide-react';
+import React, { useRef, useState } from "react";
+import ManagerLayout from "../components/ManagerLayout";
+import useAuthStore from "../store/useAuthStore";
+import { useNavigate } from "react-router-dom";
 
 export default function ManagerSettings() {
-    const { user } = useAuthStore();
-    const role = user?.role?.toUpperCase() || 'MANAGER';
+    const { user, logout } = useAuthStore();
+    const navigate = useNavigate();
 
-    const S = {
-        card: {
-            backgroundColor: '#ffffff',
-            borderRadius: '20px',
-            border: '1px solid #e2e8f0',
-            padding: '2.5rem',
-            maxWidth: '800px',
-            margin: '0 auto',
-            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
-        },
-        sectionTitle: {
-            fontSize: '1.25rem',
-            fontWeight: 700,
-            color: '#0f172a',
-            marginBottom: '2rem',
-            paddingBottom: '0.75rem',
-            borderBottom: '1px solid #f1f5f9'
-        },
-        profileHeader: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '2rem',
-            marginBottom: '3rem'
-        },
-        avatarLarge: {
-            width: '100px',
-            height: '100px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #FF5A00 0%, #ea580c 100%)',
-            color: '#ffffff',
-            fontSize: '2.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            boxShadow: '0 10px 15px -3px rgba(234, 88, 12, 0.3)'
-        },
-        infoGrid: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.5rem'
-        },
-        infoRow: {
-            display: 'grid',
-            gridTemplateColumns: '40px 140px 1fr',
-            alignItems: 'center'
-        },
-        infoIcon: {
-            color: '#64748b',
-            display: 'flex',
-            alignItems: 'center'
-        },
-        infoLabel: {
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            color: '#64748b'
-        },
-        infoValue: {
-            fontSize: '1rem',
-            fontWeight: 700,
-            color: '#0f172a'
-        },
-        badge: {
-            display: 'inline-block',
-            padding: '4px 12px',
-            backgroundColor: '#f1f5f9',
-            color: '#475569',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            borderRadius: '6px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-        }
+    const handleLogout = () => {
+        logout();
+        navigate("/login");
     };
 
     return (
-        <ManagerLayout
-            title="Account Settings"
-            subtitle="Manage your profile, preferences, and account security."
-        >
-            <div style={S.card}>
-                <h2 style={S.sectionTitle}>Personal Profile</h2>
-
-                <div style={S.profileHeader}>
-                    <div style={S.avatarLarge}>
-                        {user?.name?.charAt(0).toUpperCase() || 'P'}
-                    </div>
+        <ManagerLayout>
+            <div className="max-w-[1400px] w-full mx-auto py-12 px-10 box-border">
+                <div className="flex justify-between items-end mb-10">
                     <div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>{user?.name}</div>
-                        <div style={{ color: '#64748b', fontWeight: 500 }}>{role} Profile</div>
+                        <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Account Settings</h1>
+                        <p className="text-base text-slate-500 font-medium">Manage your profile and session settings.</p>
                     </div>
                 </div>
 
-                <div style={S.infoGrid}>
-                    <div style={S.infoRow}>
-                        <div style={S.infoIcon}><User size={20} /></div>
-                        <span style={S.infoLabel}>Full Name</span>
-                        <span style={S.infoValue}>{user?.name || 'N/A'}</span>
-                    </div>
-
-                    <div style={S.infoRow}>
-                        <div style={S.infoIcon}><Mail size={20} /></div>
-                        <span style={S.infoLabel}>Email Address</span>
-                        <span style={S.infoValue}>{user?.email || 'N/A'}</span>
-                    </div>
-
-                    <div style={S.infoRow}>
-                        <div style={S.infoIcon}><ShieldCheck size={20} /></div>
-                        <span style={S.infoLabel}>Account Role</span>
-                        <div>
-                            <span style={S.badge}>{role}</span>
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-[800px] mx-auto flex flex-col gap-8 shadow-sm">
+                    <div>
+                        <h2 className="text-[1.1rem] font-bold text-slate-900 border-b border-slate-100 pb-3 mb-6">Personal Profile</h2>
+                        <div className="flex items-center gap-8">
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white text-[2rem] flex items-center justify-center font-bold flex-shrink-0">
+                                {user?.name ? user.name.charAt(0).toUpperCase() : "P"}
+                            </div>
+                            <div className="flex flex-col gap-3 flex-1">
+                                <div className="grid grid-cols-[120px,1fr] items-center">
+                                    <span className="text-slate-500 text-sm font-medium">Full Name</span>
+                                    <span className="font-semibold text-slate-900">{user?.name || "N/A"}</span>
+                                </div>
+                                <div className="grid grid-cols-[120px,1fr] items-center">
+                                    <span className="text-slate-500 text-sm font-medium">Email Address</span>
+                                    <span className="font-semibold text-slate-900">{user?.email || "N/A"}</span>
+                                </div>
+                                <div className="grid grid-cols-[120px,1fr] items-center">
+                                    <span className="text-slate-500 text-sm font-medium">Account Role</span>
+                                    <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 text-[0.65rem] font-bold rounded uppercase tracking-wider w-fit">{user?.role}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
-                    <p style={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>
-                        Need to update your login credentials or branch details? Please contact the administrator.
-                    </p>
+                    <div>
+                        <h2 className="text-[1.1rem] font-bold text-slate-900 border-b border-slate-100 pb-3 mb-6">Session</h2>
+                        <p className="text-sm text-slate-500 mb-6 font-medium">
+                            You are currently signed in as <span className="font-bold text-slate-900">{user?.name}</span>. Signing out will end your current session.
+                        </p>
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 w-full p-3 px-4 border border-red-200 bg-white text-red-500 text-sm font-semibold cursor-pointer transition-colors hover:bg-red-50 rounded-xl"
+                        >
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                            Sign Out
+                        </button>
+                    </div>
                 </div>
             </div>
         </ManagerLayout>

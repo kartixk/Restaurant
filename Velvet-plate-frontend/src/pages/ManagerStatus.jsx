@@ -1,13 +1,18 @@
+// src/pages/ManagerStatus.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import useAuthStore from "../store/useAuthStore";
-import { Clock, LogOut } from "lucide-react";
+import { Clock, ShieldCheck, LogOut, Mail, HelpCircle, Activity } from "lucide-react";
+import { motion } from "framer-motion";
+
+import { toast } from "react-toastify";
 
 export default function ManagerStatus() {
-    const { logout } = useAuthStore();
+    const { logout, user } = useAuthStore();
     const navigate = useNavigate();
     const [loading, setLoading] = React.useState(true);
+    const [uplinkLoading, setUplinkLoading] = React.useState(false);
 
     React.useEffect(() => {
         const checkStatus = async () => {
@@ -15,7 +20,6 @@ export default function ManagerStatus() {
                 const res = await api.get("/branches/my-branch");
                 if (res.data) {
                     if (res.data.storeStatus?.toLowerCase() === "verified") navigate("/manager/dashboard");
-                    // If still under_review, stay here
                 } else {
                     navigate("/manager/onboarding");
                 }
@@ -28,38 +32,105 @@ export default function ManagerStatus() {
         checkStatus();
     }, [navigate]);
 
-    if (loading) return null;
+    if (loading) return (
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+            <Activity className="text-orange-500 animate-pulse" size={48} />
+        </div>
+    );
 
     const handleLogout = () => {
         logout();
         window.location.href = '/login';
     };
 
-    const S = {
-        container: { minHeight: "100vh", backgroundColor: "#f8fafc", padding: "2rem", display: "flex", justifyContent: "center", alignItems: "center", fontFamily: "'Inter', sans-serif" },
-        card: { background: "#fff", maxWidth: "500px", width: "100%", padding: "4rem 2rem", textAlign: "center", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", gap: "1.5rem" },
-        iconBox: { width: "80px", height: "80px", borderRadius: "50%", backgroundColor: "#fffbeb", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", fontSize: "2.5rem" },
-        btnOutlined: { padding: "0.75rem 1.5rem", borderRadius: "10px", backgroundColor: "transparent", color: "#ef4444", border: "1px solid #fca5a5", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem", margin: "1rem auto 0 auto" }
+    const handleUrgentUplink = async () => {
+        try {
+            setUplinkLoading(true);
+            const res = await api.post("/support/uplink");
+            toast.success(res.data.message || "Urgent support team notified!");
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to initiate uplink. Please try again.");
+        } finally {
+            setUplinkLoading(false);
+        }
     };
 
     return (
-        <div style={S.container}>
-            <div style={S.card}>
-                <div style={S.iconBox}>
-                    <Clock size={40} />
+        <div className="min-h-screen bg-white flex items-center justify-center p-8 font-sans selection:bg-orange-100">
+            {/* Background accents */}
+            <div className="fixed inset-0 pointer-events-none opacity-40">
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-orange-100/50 rounded-full blur-[100px]" />
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-slate-100/50 rounded-full blur-[80px]" />
+            </div>
+
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="bg-white max-w-2xl w-full p-16 lg:p-24 flex flex-col items-center text-center gap-12 rounded-[60px] border border-slate-200 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] relative z-10 overflow-hidden"
+            >
+                {/* Decorative Element */}
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500" />
+
+                <div className="relative">
+                    <div className="w-28 h-28 rounded-[40px] bg-slate-900 text-orange-500 flex items-center justify-center shadow-2xl rotate-6 hover:rotate-0 transition-transform duration-500">
+                        <Clock size={48} strokeWidth={2.5} />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-white border-4 border-slate-50 flex items-center justify-center text-emerald-500 shadow-lg">
+                        <ShieldCheck size={20} />
+                    </div>
                 </div>
-                <div>
-                    <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: "0 0 0.75rem 0", color: "#0f172a" }}>Application Under Review</h1>
-                    <p style={{ color: "#475569", margin: 0, fontSize: "0.95rem", lineHeight: 1.6 }}>
-                        Your store profile has been successfully submitted and is currently being verified by our team.
-                        We will review your FSSAI license and bank details shortly. Once approved, your Partner Dashboard will be fully activated.
+
+                <div className="space-y-6">
+                    <h1 className="text-5xl font-black text-slate-950 tracking-tighter leading-none lowercase">
+                        status: <span className="text-orange-600 italic">under_audit</span>
+                    </h1>
+                    <p className="text-slate-500 text-base font-medium leading-relaxed max-w-md mx-auto italic">
+                        Your entity credentials and financial metadata are currently undergoing high-fidelity verification by our compliance team.
                     </p>
                 </div>
-                <div style={{ marginTop: "1rem" }}>
-                    <button onClick={handleLogout} style={S.btnOutlined}>Logout Securely</button>
-                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '1.5rem' }}>Need help? Contact support at partner@foodflow.com</p>
+
+                <div className="w-full space-y-12">
+                    <div className="p-8 bg-slate-50 border border-slate-100 rounded-[32px] flex flex-col items-center gap-4">
+                        <div className="flex gap-2">
+                            {[1, 2, 3].map(i => (
+                                <motion.div
+                                    key={i}
+                                    animate={{ opacity: [0.2, 1, 0.2] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                                    className="w-2 h-2 rounded-full bg-orange-600"
+                                />
+                            ))}
+                        </div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Analysis in progress</p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full sm:w-auto px-10 py-5 bg-white border border-slate-200 text-slate-900 rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-900 hover:text-white hover:border-slate-900 active:scale-95 transition-all shadow-xl shadow-slate-200/50 flex items-center justify-center gap-3"
+                        >
+                            <LogOut size={16} /> Terminate Session
+                        </button>
+                        <button
+                            onClick={handleUrgentUplink}
+                            disabled={uplinkLoading}
+                            className="w-full sm:w-auto px-10 py-5 bg-orange-50 text-orange-600 rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-orange-600 hover:text-white active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Mail size={16} /> {uplinkLoading ? "Connecting..." : "Urgent Uplink"}
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-4 pt-4 border-t border-slate-50">
+                        <div className="flex items-center gap-2 text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">
+                            <HelpCircle size={12} /> protocol support
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400">
+                            REFERENCE ID: <span className="text-slate-900 font-black">{(user?.id || 'AUTH-000').slice(-8).toUpperCase()}</span>
+                        </p>
+                    </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }

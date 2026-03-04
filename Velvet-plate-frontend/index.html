@@ -12,39 +12,39 @@
     rel="stylesheet">
   <title>Velvet Plate</title>
   <style>
-    /* Global Reset to fix edge gaps and scrollbars */
-    html,
-    body {
+    /* Global Reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow-x: hidden;
-      background-color: #121212;
-      color: #ffffff;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     #root {
       min-height: 100vh;
     }
 
-    /* Custom Premium Scrollbar */
+    /* Light scrollbar — matches Admin dashboard */
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
     }
 
     ::-webkit-scrollbar-track {
-      background: #0f172a;
+      background: #f8fafc;
     }
 
     ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
+      background: #cbd5e1;
       border-radius: 10px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.25);
+      background: #94a3b8;
     }
   </style>
 </head>

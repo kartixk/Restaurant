@@ -46,6 +46,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use('/api', limiter);
 
 app.use("/api/cart", require("./routes/cart"));
+app.use("/api/support", require("./routes/supportRoutes"));
+app.use("/api/orders", require("./routes/orderRoutes"));
 app.use("/api/products", require("./routes/products"));
 app.use("/api/branches", require("./routes/branchRoutes"));
 app.use("/api/auth", authLimiter, require("./routes/auth"));

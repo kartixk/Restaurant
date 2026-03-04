@@ -1,5 +1,5 @@
 const prisma = require("../prismaClient");
-const { sendConfirmationEmail } = require("../utils/email");
+const { sendManagerAccountVerifiedEmail } = require("../utils/email");
 
 const getPendingManagers = async () => {
     return await prisma.user.findMany({
@@ -52,7 +52,7 @@ const approveManager = async (managerId) => {
     });
 
     // Send confirmation email asynchronously
-    sendConfirmationEmail(updatedManager.email, updatedManager.name || "Manager");
+    sendManagerAccountVerifiedEmail(updatedManager.email, updatedManager.name || "Manager");
 
     return updatedManager;
 };

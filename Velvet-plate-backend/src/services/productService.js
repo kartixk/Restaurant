@@ -10,28 +10,49 @@ const toTitleCase = (str = "") =>
         .join(" ");
 
 const getAllProducts = async (branchId = null) => {
-    const where = branchId ? { branchId } : {};
+    let whereCondition = {};
+    if (branchId) {
+        whereCondition = {
+            OR: [
+                { branchId: branchId },
+                { branchId: null }
+            ]
+        };
+    }
+
     const products = await prisma.product.findMany({
-        where,
+        where: whereCondition,
         orderBy: { createdAt: "desc" },
-        include: { branch: { select: { name: true } } }
+        include: {
+            branch: { select: { name: true } },
+            ...(branchId ? { branchStatuses: { where: { branchId } } } : {})
+        }
     });
 
-    return products.map((p) => ({
-        ...p,
-        _id: p.id,
-        branchName: p.branch?.name
-    }));
+    return products.map((p) => {
+        // If a branch override exists for this product, use its availability
+        const isAvailable = p.branchStatuses && p.branchStatuses.length > 0
+            ? p.branchStatuses[0].isAvailable
+            : p.isAvailable;
+
+        return {
+            ...p,
+            _id: p.id,
+            branchName: p.branch?.name || "Global",
+            isAvailable,
+            // Fallback quantity for frontend compatibility
+            quantity: isAvailable ? 1 : 0
+        };
+    });
 };
 
 const upsertProduct = async (data) => {
     const formattedName = toTitleCase(data.name);
 
-    if (!data.branchId) {
-        throw new Error("Branch ID is required to add or update a product");
-    }
-
     const isAvailable = data.isAvailable !== undefined ? data.isAvailable === "true" || data.isAvailable === true : true;
+
+    const price = typeof data.price === 'string' ? parseFloat(data.price) : data.price;
+    const branchId = data.branchId === "" ? null : data.branchId;
 
     const product = await prisma.product.upsert({
         where: {
@@ -40,20 +61,22 @@ const upsertProduct = async (data) => {
         update: {
             name: formattedName,
             description: data.description || null,
-            price: data.price,
+            price: price,
             category: data.category,
+            dietType: data.dietType || "Veg",
             isAvailable: isAvailable,
             imageUrl: data.imageUrl,
-            branchId: data.branchId
+            branchId: branchId
         },
         create: {
             name: formattedName,
             description: data.description || null,
-            price: data.price,
+            price: price,
             category: data.category,
+            dietType: data.dietType || "Veg",
             isAvailable: isAvailable,
             imageUrl: data.imageUrl,
-            branchId: data.branchId
+            branchId: branchId
         },
     });
     return product;
@@ -119,12 +142,32 @@ const purchaseProduct = async (productId, userId, quantityToBuy) => {
     });
 };
 
-const setProductAvailability = async (productId, isAvailable) => {
-    const product = await prisma.product.update({
-        where: { id: productId },
-        data: { isAvailable: isAvailable },
-    });
-    return product;
+const setProductAvailability = async (productId, isAvailable, branchId = null) => {
+    if (branchId) {
+        // Update or create branch-specific status override
+        const statusRecord = await prisma.branchItemStatus.upsert({
+            where: {
+                branchId_productId: {
+                    branchId,
+                    productId
+                }
+            },
+            update: { isAvailable },
+            create: {
+                branchId,
+                productId,
+                isAvailable
+            }
+        });
+        return statusRecord;
+    } else {
+        // Update global fallback (Admin level)
+        const product = await prisma.product.update({
+            where: { id: productId },
+            data: { isAvailable: isAvailable },
+        });
+        return product;
+    }
 };
 
 // Kept for backwards compatibility but changed to availability

@@ -1,4 +1,5 @@
 const productService = require("../services/productService");
+const prisma = require("../prismaClient");
 
 const getAllProducts = async (req, res, next) => {
     try {
@@ -12,9 +13,8 @@ const getAllProducts = async (req, res, next) => {
 
 const upsertProduct = async (req, res, next) => {
     try {
-        // If manager, we should ideally force the branchId from their profile
-        // For now, take it from body
         const productData = { ...req.body };
+        // If not provided, it means global product
         const product = await productService.upsertProduct(productData);
         res.status(201).json(product);
     } catch (err) {
@@ -72,11 +72,46 @@ const restockProduct = async (req, res, next) => {
     }
 };
 
+const updateAvailability = async (req, res, next) => {
+    try {
+        const { isAvailable } = req.body;
+        // Verify user role
+        const role = req.user.role.toUpperCase();
+
+        let branchIdToUpdate = null;
+
+        if (role === 'MANAGER') {
+            // Fetch the user to get their managed branch since it's not in the basic JWT payload
+            const user = await prisma.user.findUnique({
+                where: { id: req.user.id },
+                include: { managedBranch: true }
+            });
+
+            if (!user || !user.managedBranch) {
+                return res.status(403).json({ message: "Manager does not have an assigned branch." });
+            }
+            branchIdToUpdate = user.managedBranch.id;
+        } else if (role === 'ADMIN') {
+            // Admin updates the global product status (branchId = null)
+            branchIdToUpdate = null;
+        } else {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+
+        const updatedProduct = await productService.setProductAvailability(req.params.id, isAvailable, branchIdToUpdate);
+        res.status(200).json(updatedProduct);
+
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getAllProducts,
     upsertProduct,
     updateProductById,
     deleteProductById,
     purchaseProduct,
-    restockProduct
+    restockProduct,
+    updateAvailability
 };

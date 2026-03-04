@@ -1,4 +1,5 @@
 const prisma = require("../prismaClient");
+const { sendOrderConfirmationEmail } = require("../utils/email");
 
 const getCart = async (userId) => {
     const cart = await prisma.cart.findUnique({
@@ -152,6 +153,9 @@ const confirmOrder = async (userId) => {
                 orderTotal,
                 orderType: cart.orderType || "DINE_IN",
                 status: "RECEIVED"
+            },
+            include: {
+                user: { select: { email: true, name: true } }
             }
         });
 
@@ -160,6 +164,17 @@ const confirmOrder = async (userId) => {
             where: { id: cart.id },
             data: { items: [], total: 0 }
         });
+
+        // Send order confirmation email
+        if (order.user?.email) {
+            sendOrderConfirmationEmail(
+                order.user.email,
+                order.user.name || 'Customer',
+                order.id,
+                orderTotal,
+                orderItems
+            );
+        }
 
         return { message: "Order placed successfully 🎉", orderId: order.id };
     });
@@ -190,8 +205,22 @@ const buyNow = async (userId, productId, quantity, orderType = "TAKEAWAY") => {
                 orderTotal: totalPrice,
                 orderType: orderType,
                 status: "RECEIVED"
+            },
+            include: {
+                user: { select: { email: true, name: true } }
             }
         });
+
+        // Send order confirmation email
+        if (order.user?.email) {
+            sendOrderConfirmationEmail(
+                order.user.email,
+                order.user.name || 'Customer',
+                order.id,
+                totalPrice,
+                order.items
+            );
+        }
 
         return { message: "Order placed successfully 🎉", orderId: order.id };
     });
