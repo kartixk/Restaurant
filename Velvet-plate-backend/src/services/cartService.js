@@ -106,7 +106,7 @@ const updateOrderType = async (userId, orderType) => {
     });
 };
 
-const confirmOrder = async (userId) => {
+const confirmOrder = async (userId, paymentMethod = 'CASH', providedBranchId = null) => {
     return await prisma.$transaction(async (tx) => {
         const cart = await tx.cart.findUnique({ where: { userId } });
 
@@ -116,7 +116,7 @@ const confirmOrder = async (userId) => {
 
         let orderTotal = 0;
         const orderItems = [];
-        let branchId = null;
+        let branchIdFromItems = null;
 
         for (const item of cart.items) {
             const product = await tx.product.findUnique({ where: { id: item.productId } });
@@ -130,7 +130,7 @@ const confirmOrder = async (userId) => {
             }
 
             // In a QSR, assume the cart belongs to a single branch. We take the branch from the first item.
-            if (!branchId) branchId = product.branchId;
+            if (!branchIdFromItems) branchIdFromItems = product.branchId;
 
             const totalPrice = item.price * item.quantity;
             orderTotal += totalPrice;
@@ -144,14 +144,24 @@ const confirmOrder = async (userId) => {
             });
         }
 
+        const branchId = providedBranchId || branchIdFromItems;
+        if (!branchId) throw new Error("Branch ID is required for order creation");
+
+        const subtotal = orderTotal;
+        const sgst = Number((subtotal * 0.09).toFixed(2));
+        const cgst = Number((subtotal * 0.09).toFixed(2));
+        const grandTotal = Number((subtotal + sgst + cgst).toFixed(2));
+
         // Save order
         const order = await tx.order.create({
             data: {
-                userId,
-                branchId,
+                user: { connect: { id: userId } },
+                branch: { connect: { id: branchId } },
                 items: orderItems,
-                orderTotal,
+                orderTotal: grandTotal,
                 orderType: cart.orderType || "DINE_IN",
+                paymentMethod: paymentMethod,
+                paymentStatus: paymentMethod === 'CASH' ? 'pending' : 'paid', // Simple logic
                 status: "RECEIVED"
             },
             include: {
@@ -189,21 +199,26 @@ const buyNow = async (userId, productId, quantity, orderType = "TAKEAWAY") => {
             throw new Error("Product is currently unavailable");
         }
 
-        const totalPrice = product.price * quantity;
+        const subtotal = product.price * quantity;
+        const sgst = Number((subtotal * 0.09).toFixed(2));
+        const cgst = Number((subtotal * 0.09).toFixed(2));
+        const grandTotal = Number((subtotal + sgst + cgst).toFixed(2));
 
         const order = await tx.order.create({
             data: {
-                userId,
-                branchId: product.branchId,
+                user: { connect: { id: userId } },
+                branch: { connect: { id: product.branchId } },
                 items: [{
                     productId: product.id,
                     productName: product.name,
                     price: product.price,
                     quantity,
-                    totalPrice
+                    totalPrice: subtotal
                 }],
-                orderTotal: totalPrice,
+                orderTotal: grandTotal,
                 orderType: orderType,
+                paymentMethod: 'CASH', // Default for Buy Now for now
+                paymentStatus: 'pending',
                 status: "RECEIVED"
             },
             include: {

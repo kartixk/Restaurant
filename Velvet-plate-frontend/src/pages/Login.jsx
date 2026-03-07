@@ -37,7 +37,7 @@ export default function Login() {
       } else if (role === "MANAGER") {
         navigate("/manager/dashboard");
       } else {
-        navigate("/");
+        navigate("/menu");
       }
     } catch (err) {
       let errMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Invalid email or password";

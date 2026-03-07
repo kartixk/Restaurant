@@ -46,8 +46,49 @@ const updateOrderStatus = async (orderId, status) => {
     return order;
 };
 
+const getUserOrders = async (userId) => {
+    return await prisma.order.findMany({
+        where: { userId },
+        include: {
+            branch: { select: { name: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 7
+    });
+};
+
+const collectOrder = async (orderId, userId) => {
+    // 1. Fetch order to verify ownership and status
+    const order = await prisma.order.findUnique({
+        where: { id: orderId }
+    });
+
+    if (!order) {
+        const error = new Error("Order not found");
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (order.userId !== userId) {
+        const error = new Error("Unauthorized to collect this order");
+        error.statusCode = 403;
+        throw error;
+    }
+
+    if (order.status !== "READY") {
+        const error = new Error("Order is not ready for collection yet");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // 2. Reuse updateOrderStatus to move it to COMPLETED and send email
+    return await updateOrderStatus(orderId, "COMPLETED");
+};
+
 module.exports = {
     getMyBranchOrders,
     getOrderById,
-    updateOrderStatus
+    updateOrderStatus,
+    getUserOrders,
+    collectOrder
 };

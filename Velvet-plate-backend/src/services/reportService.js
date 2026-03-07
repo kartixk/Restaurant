@@ -35,12 +35,15 @@ const getSalesReports = async (type) => {
             createdAt: {
                 gte: start,
                 lte: end
-            }
+            },
+            status: { not: "CANCELLED" }
         },
         select: {
             orderTotal: true,
             createdAt: true,
-            orderType: true
+            orderType: true,
+            items: true,
+            branchId: true
         },
         orderBy: {
             createdAt: 'desc'
@@ -48,10 +51,12 @@ const getSalesReports = async (type) => {
     });
 
     const totalAmount = orders.reduce((sum, s) => sum + (Number(s.orderTotal) || 0), 0);
+    const totalCommission = totalAmount * 0.15;
 
     return {
         count: orders.length,
         totalAmount,
+        totalCommission,
         sales: orders // Keeping the response key "sales" to not break frontend reports initially
     };
 };
@@ -85,12 +90,15 @@ const getBranchSalesReports = async (branchId, type) => {
             createdAt: {
                 gte: start,
                 lte: end
-            }
+            },
+            status: { not: "CANCELLED" }
         },
         select: {
             orderTotal: true,
             createdAt: true,
-            orderType: true
+            orderType: true,
+            items: true,
+            branchId: true
         },
         orderBy: {
             createdAt: 'desc'
@@ -98,10 +106,12 @@ const getBranchSalesReports = async (branchId, type) => {
     });
 
     const totalAmount = orders.reduce((sum, s) => sum + (Number(s.orderTotal) || 0), 0);
+    const totalCommission = totalAmount * 0.15;
 
     return {
         count: orders.length,
         totalAmount,
+        totalCommission,
         sales: orders
     };
 };

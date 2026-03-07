@@ -6,13 +6,10 @@ import useAuthStore from "../store/useAuthStore";
 import { Clock, ShieldCheck, LogOut, Mail, HelpCircle, Activity } from "lucide-react";
 import { motion } from "framer-motion";
 
-import { toast } from "react-toastify";
-
 export default function ManagerStatus() {
     const { logout, user } = useAuthStore();
     const navigate = useNavigate();
     const [loading, setLoading] = React.useState(true);
-    const [uplinkLoading, setUplinkLoading] = React.useState(false);
 
     React.useEffect(() => {
         const checkStatus = async () => {
@@ -41,18 +38,6 @@ export default function ManagerStatus() {
     const handleLogout = () => {
         logout();
         window.location.href = '/login';
-    };
-
-    const handleUrgentUplink = async () => {
-        try {
-            setUplinkLoading(true);
-            const res = await api.post("/support/uplink");
-            toast.success(res.data.message || "Urgent support team notified!");
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to initiate uplink. Please try again.");
-        } finally {
-            setUplinkLoading(false);
-        }
     };
 
     return (
@@ -112,13 +97,12 @@ export default function ManagerStatus() {
                         >
                             <LogOut size={16} /> Terminate Session
                         </button>
-                        <button
-                            onClick={handleUrgentUplink}
-                            disabled={uplinkLoading}
-                            className="w-full sm:w-auto px-10 py-5 bg-orange-50 text-orange-600 rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-orange-600 hover:text-white active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                        <a
+                            href="mailto:partners@velvetplate.com"
+                            className="w-full sm:w-auto px-10 py-5 bg-orange-50 text-orange-600 rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-orange-600 hover:text-white active:scale-95 transition-all flex items-center justify-center gap-3"
                         >
-                            <Mail size={16} /> {uplinkLoading ? "Connecting..." : "Urgent Uplink"}
-                        </button>
+                            <Mail size={16} /> Urgent Uplink
+                        </a>
                     </div>
 
                     <div className="flex flex-col items-center gap-4 pt-4 border-t border-slate-50">

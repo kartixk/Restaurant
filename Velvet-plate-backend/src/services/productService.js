@@ -16,7 +16,14 @@ const getAllProducts = async (branchId = null) => {
             OR: [
                 { branchId: branchId },
                 { branchId: null }
-            ]
+            ],
+            // Optimization: Filter out products that are specifically deleted for this branch
+            branchStatuses: {
+                none: {
+                    branchId: branchId,
+                    isDeleted: true
+                }
+            }
         };
     }
 
@@ -31,19 +38,19 @@ const getAllProducts = async (branchId = null) => {
 
     return products.map((p) => {
         // If a branch override exists for this product, use its availability
-        const isAvailable = p.branchStatuses && p.branchStatuses.length > 0
-            ? p.branchStatuses[0].isAvailable
-            : p.isAvailable;
+        const status = p.branchStatuses && p.branchStatuses.length > 0 ? p.branchStatuses[0] : null;
+        const isAvailable = status ? status.isAvailable : p.isAvailable;
+        const isDeleted = status ? status.isDeleted : false;
 
         return {
             ...p,
             _id: p.id,
             branchName: p.branch?.name || "Global",
             isAvailable,
-            // Fallback quantity for frontend compatibility
+            isDeleted,
             quantity: isAvailable ? 1 : 0
         };
-    });
+    }).filter(p => !p.isDeleted); // Safety filter remains but DB does most of the work
 };
 
 const upsertProduct = async (data) => {
@@ -103,8 +110,36 @@ const updateProductById = async (id, data) => {
     return updatedProduct;
 };
 
-const deleteProductById = async (id) => {
-    await prisma.product.delete({ where: { id } });
+const deleteProductById = async (id, branchId = null, role = "ADMIN") => {
+    if (role === "MANAGER" && branchId) {
+        // Manager can only unlink global products from their branch
+        // or delete branch-specific products entirely (if they created it exclusively for their branch)
+        const product = await prisma.product.findUnique({ where: { id } });
+
+        if (product && product.branchId === branchId) {
+            // It's a localized product created just for this branch, safe to delete entirely
+            await prisma.product.delete({ where: { id } });
+        } else {
+            // It's a global product, only unlink via BranchItemStatus override
+            await prisma.branchItemStatus.upsert({
+                where: {
+                    branchId_productId: {
+                        branchId,
+                        productId: id
+                    }
+                },
+                update: { isAvailable: false },
+                create: {
+                    branchId,
+                    productId: id,
+                    isAvailable: false
+                }
+            });
+        }
+    } else {
+        // Admin deletes the product globally
+        await prisma.product.delete({ where: { id } });
+    }
 };
 
 const purchaseProduct = async (productId, userId, quantityToBuy) => {

@@ -48,6 +48,7 @@ export default function AddProductForm({
                         required
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900 outline-none transition-colors focus:border-orange-500 bg-white cursor-pointer"
                     >
+                        <option value="" disabled>Select a category</option>
                         {categories.map((cat) => (
                             <option key={cat} value={cat}>
                                 {cat}
@@ -56,18 +57,21 @@ export default function AddProductForm({
                     </select>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-slate-600 block">Diet Type</label>
+                    <label className="text-sm font-semibold text-slate-600 block">Food Preference</label>
                     <select
                         name="dietType"
-                        value={newProduct.dietType || "Veg"}
+                        value={newProduct.dietType}
                         onChange={handleChange}
                         required
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900 outline-none transition-colors focus:border-orange-500 bg-white cursor-pointer"
                     >
+                        <option value="" disabled>Select food preference</option>
                         <option value="Veg">Veg</option>
                         <option value="Non-Veg">Non-Veg</option>
                         <option value="Vegan">Vegan</option>
                         <option value="Egg">contains Egg</option>
+                        <option value="Beverages and thickshakes">Beverages and thickshakes</option>
+                        <option value="Dessert">Dessert</option>
                     </select>
                 </div>
                 <div className="flex flex-col gap-2">

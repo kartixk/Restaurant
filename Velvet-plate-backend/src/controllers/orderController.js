@@ -30,8 +30,31 @@ const updateOrderStatus = async (req, res, next) => {
     }
 };
 
+const getUserOrders = async (req, res, next) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const orders = await orderService.getUserOrders(userId);
+        res.status(200).json(orders);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const collectOrder = async (req, res, next) => {
+    try {
+        const orderId = req.params.id;
+        const userId = req.user.id || req.user._id;
+        const order = await orderService.collectOrder(orderId, userId);
+        res.status(200).json(order);
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getMyBranchOrders,
     getOrderById,
-    updateOrderStatus
+    updateOrderStatus,
+    getUserOrders,
+    collectOrder
 };

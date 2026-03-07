@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Save, Trash2, Search } from 'lucide-react';
+import { Trash2, Search } from 'lucide-react';
 
 const cardVariants = {
     initial: { opacity: 0, y: 30, scale: 0.95 },
@@ -46,8 +46,8 @@ const inventoryItemVariants = {
     },
     hover: {
         scale: 1.02,
-        y: -2,
-        boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+        y: -1,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
         zIndex: 10,
         transition: { duration: 0.2 }
     }
@@ -60,10 +60,7 @@ export default function ProductInventoryList({
     inventorySearch,
     setInventorySearch,
     filteredInventory,
-    stockInputs,
-    handleStockInputChange,
-    adjustStock,
-    saveStockUpdate,
+    toggleAvailability,
     handleDeleteProduct
 }) {
     const [currentPage, setCurrentPage] = useState(1);
@@ -91,7 +88,7 @@ export default function ProductInventoryList({
                         placeholder="Search items..."
                         value={inventorySearch}
                         onChange={(e) => setInventorySearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-orange-500 transition-colors"
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-orange-500 transition-colors shadow-sm"
                     />
                     <Search className="absolute left-3 text-slate-400" size={18} />
                 </div>
@@ -104,8 +101,8 @@ export default function ProductInventoryList({
                         key={cat}
                         onClick={() => setInventoryCategory(cat)}
                         className={`px-4 py-1.5 rounded-full border text-sm font-semibold whitespace-nowrap transition-all ${inventoryCategory === cat
-                                ? "bg-slate-900 text-white border-slate-900"
-                                : "bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50"
+                            ? "bg-slate-900 text-white border-slate-900 shadow-md"
+                            : "bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50"
                             }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -140,62 +137,73 @@ export default function ProductInventoryList({
                                     animate="visible"
                                     exit="exit"
                                     whileHover="hover"
-                                    className="flex justify-between items-center p-4 mb-2 bg-white rounded-xl border border-slate-200 shadow-sm"
+                                    className="flex justify-between items-center p-4 mb-2 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-orange-100 transition-colors"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <img
-                                            src={s.imageUrl || 'https://placehold.co/50x50/f8fafc/64748b?text=Img'}
-                                            alt={s.name}
-                                            className="w-12 h-12 object-cover rounded-lg border border-slate-200"
-                                            onError={(e) => { e.target.src = 'https://placehold.co/50x50/f8fafc/64748b?text=Img'; }}
-                                        />
+                                        <div className="relative group">
+                                            <img
+                                                src={s.imageUrl || 'https://placehold.co/50x50/f8fafc/64748b?text=Img'}
+                                                alt={s.name}
+                                                className="w-12 h-12 object-cover rounded-lg border border-slate-200 group-hover:scale-105 transition-transform"
+                                                onError={(e) => { e.target.src = 'https://placehold.co/50x50/f8fafc/64748b?text=Img'; }}
+                                            />
+                                        </div>
                                         <div>
                                             <div className="font-bold text-slate-900 text-base mb-1">
                                                 <div className="flex items-center gap-2">
                                                     <span>{s.name}</span>
                                                     {s.dietType && (
                                                         <span className={`inline-flex items-center justify-center w-3.5 h-3.5 border rounded-[2px] bg-white ${s.dietType === 'Veg' ? 'border-emerald-600' :
-                                                                s.dietType === 'Non-Veg' ? 'border-red-600' :
-                                                                    s.dietType === 'Vegan' ? 'border-emerald-500' : 'border-amber-600'
+                                                            s.dietType === 'Non-Veg' ? 'border-red-600' :
+                                                                s.dietType === 'Vegan' ? 'border-emerald-500' :
+                                                                    s.dietType === 'Dessert' ? 'border-pink-600' : 'border-amber-600'
                                                             }`}>
                                                             <span className={`w-2 h-2 rounded-full ${s.dietType === 'Veg' ? 'bg-emerald-600' :
-                                                                    s.dietType === 'Non-Veg' ? 'bg-red-600' :
-                                                                        s.dietType === 'Vegan' ? 'bg-emerald-500' : 'bg-amber-600'
+                                                                s.dietType === 'Non-Veg' ? 'bg-red-600' :
+                                                                    s.dietType === 'Vegan' ? 'bg-emerald-500' :
+                                                                        s.dietType === 'Dessert' ? 'bg-pink-600' : 'bg-amber-600'
                                                                 }`}></span>
                                                         </span>
                                                     )}
                                                 </div>
                                             </div>
                                             <div className="flex gap-2 flex-wrap mb-1">
-                                                <span className="text-[0.7rem] bg-slate-100 px-2 py-1 rounded-md text-slate-500 font-semibold uppercase">{s.category}</span>
+                                                <span className="text-[0.7rem] bg-slate-100 px-2 py-1 rounded-md text-slate-500 font-semibold uppercase tracking-wider">{s.category}</span>
                                                 {s.branchName && (
-                                                    <span className="text-[0.7rem] bg-amber-50 px-2 py-1 rounded-md text-amber-800 font-semibold uppercase">
+                                                    <span className="text-[0.7rem] bg-amber-50 px-2 py-1 rounded-md text-amber-800 font-semibold uppercase tracking-wider">
                                                         📍 {s.branchName}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className={`text-xs font-semibold mt-1.5 ${s.isAvailable ? "text-emerald-500" : "text-red-500"}`}>
-                                                {s.isAvailable ? "• In Stock" : "• Sold Out"}
+                                            <div className={`text-xs font-semibold mt-1.5 flex items-center gap-1.5 ${s.isAvailable ? "text-emerald-500" : "text-red-500"}`}>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                {s.isAvailable ? "In Stock" : "Sold Out"}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
-                                        <motion.button
-                                            onClick={() => saveStockUpdate(s.id || s._id)}
-                                            className="w-9 h-9 rounded-lg border border-slate-200 bg-white text-blue-500 flex items-center justify-center transition-all hover:bg-blue-50"
-                                            whileHover={{ scale: 1.1 }}
-                                            title="Save"
-                                        >
-                                            <Save size={18} />
-                                        </motion.button>
+                                    <div className="flex items-center gap-6">
+                                        <div className="flex flex-col items-end gap-1.5">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Availability</span>
+                                            <label className="relative inline-flex items-center cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={!!s.isAvailable}
+                                                    onChange={() => toggleAvailability(s.id || s._id, s.isAvailable)}
+                                                />
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 shadow-sm transition-colors duration-200"></div>
+                                            </label>
+                                        </div>
+
                                         <motion.button
                                             onClick={() => handleDeleteProduct(s.id || s._id)}
-                                            className="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 flex items-center justify-center transition-all hover:bg-red-100"
-                                            whileHover={{ scale: 1.1 }}
-                                            title="Delete"
+                                            className="w-10 h-10 rounded-xl border border-red-100 bg-red-50/50 text-red-500 flex items-center justify-center transition-all hover:bg-red-100 hover:border-red-200 group/del"
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            title="Delete Item"
                                         >
-                                            <Trash2 size={18} />
+                                            <Trash2 size={18} className="group-hover/del:scale-110 transition-transform" />
                                         </motion.button>
                                     </div>
                                 </motion.div>
@@ -212,8 +220,8 @@ export default function ProductInventoryList({
                         onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         disabled={currentPage === 1}
                         className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all ${currentPage === 1
-                                ? "bg-slate-50 text-slate-300 cursor-not-allowed border-slate-100"
-                                : "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
+                            ? "bg-slate-50 text-slate-300 cursor-not-allowed border-slate-100"
+                            : "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
                             }`}
                     >
                         Previous
@@ -225,8 +233,8 @@ export default function ProductInventoryList({
                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                         disabled={currentPage === totalPages}
                         className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all ${currentPage === totalPages
-                                ? "bg-slate-50 text-slate-300 cursor-not-allowed border-slate-100"
-                                : "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
+                            ? "bg-slate-50 text-slate-300 cursor-not-allowed border-slate-100"
+                            : "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
                             }`}
                     >
                         Next

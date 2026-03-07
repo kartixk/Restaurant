@@ -67,8 +67,8 @@ export function useRemoveCartItem() {
 export function useConfirmOrder() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async () => {
-            const { data } = await api.post("/cart/confirm");
+        mutationFn: async (params) => {
+            const { data } = await api.post("/cart/confirm", params);
             return data;
         },
         onSuccess: () => {

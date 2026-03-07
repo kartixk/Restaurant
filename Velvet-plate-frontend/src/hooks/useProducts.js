@@ -1,7 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/axios";
-import useAuthStore from "../store/useAuthStore";
-
 
 export const productsKeys = {
     all: ["products"],
@@ -10,7 +8,6 @@ export const productsKeys = {
 };
 
 export function useProducts(branchId = null) {
-    const { isAuthenticated } = useAuthStore();
     return useQuery({
         queryKey: branchId ? productsKeys.byBranch(branchId) : productsKeys.all,
         queryFn: async () => {
@@ -18,7 +15,8 @@ export function useProducts(branchId = null) {
             const { data } = await api.get("/products", { params });
             return data;
         },
-        enabled: !!isAuthenticated,
+        staleTime: 1000 * 60 * 5, // 5 minutes - keep menu data fresh but avoid constant refetching
+        cacheTime: 1000 * 60 * 30, // 30 minutes
     });
 }
 

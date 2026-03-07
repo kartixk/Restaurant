@@ -26,6 +26,7 @@ router.put("/:id/visibility", authMiddleware, branchController.toggleVisibility)
 router.put("/:id/verify", authMiddleware, requireAdmin, branchController.verifyBranch);
 
 router.get("/my-branch", authMiddleware, branchController.getMyBranch);
+router.get("/list/public", branchController.getPublicBranches);
 router.get("/:id", branchController.getBranchById); // Public view of a store
 
 module.exports = router;
