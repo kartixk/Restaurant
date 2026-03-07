@@ -3,10 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from "./components/Navbar";
-import CartDrawer from "./components/CartDrawer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import useAuthStore from "./store/useAuthStore";
 
+const Landing = lazy(() => import("./pages/Landing"));
 const Products = lazy(() => import("./pages/Products"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
@@ -20,14 +20,19 @@ const ManagerOnboarding = lazy(() => import("./pages/ManagerOnboarding"));
 const ManagerStatus = lazy(() => import("./pages/ManagerStatus"));
 const ManagerSettings = lazy(() => import("./pages/ManagerSettings"));
 const OrderTracking = lazy(() => import("./pages/OrderTracking"));
+const Orders = lazy(() => import("./pages/Orders"));
 const AdminPendingRequests = lazy(() => import("./pages/AdminPendingRequests"));
+const Cart = lazy(() => import("./pages/Cart"));
 
 
 // Redirects ADMIN/MANAGER away from customer pages to their respective dashboards
+// Unauthenticated users see the Landing page, logged-in USERs go to Products
 function HomeGuard() {
-  const role = useAuthStore((s) => s.user?.role)?.toUpperCase();
-  if (role === "ADMIN") return <Navigate to="/admin" replace />;
-  if (role === "MANAGER") return <Navigate to="/manager/dashboard" replace />;
+  const { role, isAuthenticated } = useAuthStore();
+  const upperRole = role?.toUpperCase();
+  if (upperRole === "ADMIN") return <Navigate to="/admin" replace />;
+  if (upperRole === "MANAGER") return <Navigate to="/manager/dashboard" replace />;
+  if (!isAuthenticated) return <Landing />;
   return <Products />;
 }
 
@@ -48,7 +53,6 @@ function App() {
       />
 
       <Navbar />
-      <CartDrawer />
       <Suspense fallback={<div className="flex items-center justify-center h-screen text-lg font-black text-slate-400 bg-slate-50">Loading Velvet Plate...</div>}>
         <Routes>
           <Route path="/" element={<HomeGuard />} />
@@ -119,8 +123,11 @@ function App() {
           } />
 
           {/* Customer Routes */}
+          <Route path="/menu" element={<Products />} />
+          <Route path="/products" element={<Navigate to="/menu" replace />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/cart" element={<Cart />} />
           <Route path="/order/:orderId" element={<OrderTracking />} />
-          {/* We've replaced the /cart page entirely with CartDrawer */}
         </Routes>
       </Suspense>
     </BrowserRouter>

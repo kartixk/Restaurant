@@ -12,8 +12,8 @@ export default function ManagerMenu() {
     const [searchTerm, setSearchTerm] = useState("");
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "Main Course", dietType: "Veg", imageUrl: "", branchId: "" });
-    const categories = ["Starters", "Main Course", "Desserts", "Beverages", "Specials", "Breads/Rotis"];
+    const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "", dietType: "", imageUrl: "", branchId: "" });
+    const categories = ["Starters", "Soups", "Main Course", "Breads/Rotis", "Desserts", "Mocktails"];
     const [myBranchId, setMyBranchId] = useState(null);
     const [availabilityMutationLoading, setAvailabilityMutationLoading] = useState(null);
 
@@ -55,7 +55,7 @@ export default function ManagerMenu() {
             await api.post("/products", { ...newProduct, name: formattedName, branchId: myBranchId });
             toast.success(`"${formattedName}" added!`);
             setIsAddModalOpen(false);
-            setNewProduct({ name: "", price: "", category: "Main Course", dietType: "Veg", imageUrl: "", branchId: "" });
+            setNewProduct({ name: "", price: "", category: "", dietType: "", imageUrl: "", branchId: "" });
             setLoading(true);
             const menuRes = await api.get(`/products?branchId=${myBranchId}`);
             setProducts(menuRes.data || []);
@@ -138,8 +138,16 @@ export default function ManagerMenu() {
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm font-bold text-slate-900">{p.name}</span>
                                                 {p.dietType && (
-                                                    <span className={`flex items-center justify-center w-3.5 h-3.5 border rounded-sm bg-white ${p.dietType === 'Veg' ? 'border-emerald-500' : p.dietType === 'Non-Veg' ? 'border-red-500' : 'border-amber-500'}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${p.dietType === 'Veg' ? 'bg-emerald-500' : p.dietType === 'Non-Veg' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                                                    <span className={`flex items-center justify-center w-3.5 h-3.5 border rounded-sm bg-white ${p.dietType === 'Veg' ? 'border-emerald-500' :
+                                                            p.dietType === 'Non-Veg' ? 'border-red-500' :
+                                                                p.dietType === 'Dessert' ? 'border-pink-500' :
+                                                                    'border-amber-500'
+                                                        }`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${p.dietType === 'Veg' ? 'bg-emerald-500' :
+                                                                p.dietType === 'Non-Veg' ? 'bg-red-500' :
+                                                                    p.dietType === 'Dessert' ? 'bg-pink-500' :
+                                                                        'bg-amber-500'
+                                                            }`} />
                                                     </span>
                                                 )}
                                             </div>

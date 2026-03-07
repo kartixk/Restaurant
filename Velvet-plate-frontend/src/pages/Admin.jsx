@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import api from "../api/axios";
-import { useProducts, useAddProduct, useDeleteProduct, useUpdateProductStock } from "../hooks/useProducts";
+import { useProducts, useAddProduct, useDeleteProduct, useUpdateProductStock, useUpdateProductAvailability } from "../hooks/useProducts";
 import { useBranches } from "../hooks/useBranches";
 import useAuthStore from "../store/useAuthStore";
 import { toast, ToastContainer } from "react-toastify";
@@ -15,6 +15,7 @@ import {
 import AddProductForm from "../components/features/admin/AddProductForm";
 import ProductInventoryList from "../components/features/admin/ProductInventoryList";
 import BranchSettingsModal from "../components/features/admin/BranchSettingsModal";
+import ConfirmationModal from "../components/ui/ConfirmationModal";
 
 // ─── FORMATTERS ─────────────────────────────────────────────────────────────
 const formatCurrency = (value) => {
@@ -118,6 +119,13 @@ export default function Admin() {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
   const [branchFilterStatus, setBranchFilterStatus] = useState("All");
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => { },
+    type: "danger"
+  });
   // const S = useMemo(() => getStyles(isDarkMode), [isDarkMode]);
 
   // Close notification dropdown when clicking outside
@@ -138,13 +146,13 @@ export default function Admin() {
   const { data: products = [], error: productsError } = useProducts(selectedBranchId);
 
   // Forms & State
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "Main Course", dietType: "Veg", imageUrl: "", branchId: "" });
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "", dietType: "", imageUrl: "", branchId: "" });
   const [stockInputs, setStockInputs] = useState({});
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryCategory, setInventoryCategory] = useState("All");
 
   // Reports State
-  const [reportSummary, setReportSummary] = useState({ totalAmount: 0, count: 0 });
+  const [reportSummary, setReportSummary] = useState({ totalAmount: 0, count: 0, totalCommission: 0 });
   const [salesList, setSalesList] = useState([]);
   const [reportLoading, setReportLoading] = useState(false);
 
@@ -152,8 +160,9 @@ export default function Admin() {
   const addProductMutation = useAddProduct();
   const deleteProductMutation = useDeleteProduct();
   const updateStockMutation = useUpdateProductStock();
+  const updateAvailabilityMutation = useUpdateProductAvailability();
 
-  const categories = ["Starters", "Main Course", "Desserts", "Beverages", "Specials", "Breads/Rotis"];
+  const categories = ["Starters", "Soups", "Main Course", "Breads/Rotis", "Desserts", "Mocktails"];
 
   useEffect(() => {
     if (!isAuthenticated || (role !== "ADMIN" && role !== "MANAGER")) {
@@ -198,11 +207,15 @@ export default function Admin() {
       const endpoint = role === "ADMIN" ? "/reports/sales" : "/reports/branch-sales";
       const res = await api.get(`${endpoint}?type=${type}${selectedBranchId ? `&branchId=${selectedBranchId}` : ""}`);
       const data = Array.isArray(res.data) ? (res.data[0] || {}) : res.data;
-      setReportSummary({ totalAmount: data.totalAmount || 0, count: data.count || 0 });
+      setReportSummary({
+        totalAmount: data.totalAmount || 0,
+        count: data.count || 0,
+        totalCommission: data.totalCommission || 0
+      });
       setSalesList(data.sales || []);
     } catch (err) {
       handleApiError(err, "Failed to load reports");
-      setSalesList([]); setReportSummary({ totalAmount: 0, count: 0 });
+      setSalesList([]); setReportSummary({ totalAmount: 0, count: 0, totalCommission: 0 });
     } finally { setReportLoading(false); }
   };
 
@@ -245,32 +258,44 @@ export default function Admin() {
   ];
 
   // Logic handlers
-  const handleStockInputChange = (id, v) => setStockInputs({ ...stockInputs, [id]: Number(v) });
-  const adjustStock = (id, cur, amt) => {
-    const base = stockInputs[id] !== undefined ? stockInputs[id] : cur;
-    const nv = base + amt;
-    if (nv >= 0) setStockInputs({ ...stockInputs, [id]: nv });
-    else toast.warning("Stock cannot be negative");
-  };
-  const saveStockUpdate = (id) => {
-    if (stockInputs[id] === undefined) { toast.info("No changes"); return; }
-    updateStockMutation.mutate({ id, quantity: stockInputs[id] }, {
-      onSuccess: () => { toast.success("Stock updated!"); const n = { ...stockInputs }; delete n[id]; setStockInputs(n); },
-      onError: (err) => handleApiError(err, "Stock update failed")
+  const toggleAvailability = (id, currentStatus) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Update Availability",
+      message: `Are you sure you want to mark this item as ${currentStatus ? 'Sold Out' : 'In Stock'}?`,
+      confirmText: "Yes, Update",
+      type: "orange",
+      onConfirm: () => {
+        updateAvailabilityMutation.mutate({ id, isAvailable: !currentStatus }, {
+          onSuccess: () => toast.success("Availability updated!"),
+          onError: (err) => handleApiError(err, "Update failed")
+        });
+      }
     });
   };
+
   const handleAddProduct = (e) => {
     e.preventDefault();
     const name = newProduct.name.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     addProductMutation.mutate({ ...newProduct, name, branchId: newProduct.branchId === "" ? null : newProduct.branchId }, {
-      onSuccess: () => { toast.success(`"${name}" added!`); setNewProduct({ name: "", price: "", category: "Main Course", dietType: "Veg", imageUrl: "", branchId: "" }); },
+      onSuccess: () => { toast.success(`"${name}" added!`); setNewProduct({ name: "", price: "", category: "", dietType: "", imageUrl: "", branchId: "" }); },
       onError: (err) => handleApiError(err, "Failed to add product")
     });
   };
+
   const handleDeleteProduct = (id) => {
-    if (window.confirm("Delete this item?")) deleteProductMutation.mutate(id, {
-      onSuccess: () => toast.success("Deleted!"),
-      onError: (err) => handleApiError(err, "Delete failed")
+    setConfirmConfig({
+      isOpen: true,
+      title: "Permanent Deletion",
+      message: "Are you sure you want to permanently delete this item? This action cannot be undone.",
+      confirmText: "Delete Permanently",
+      type: "danger",
+      onConfirm: () => {
+        deleteProductMutation.mutate(id, {
+          onSuccess: () => toast.success("Deleted!"),
+          onError: (err) => handleApiError(err, "Delete failed")
+        });
+      }
     });
   };
   const filteredInventory = products.filter(s => s.name.toLowerCase().includes(inventorySearch.toLowerCase()) && (inventoryCategory === "All" || s.category === inventoryCategory)).sort((a, b) => a.name.localeCompare(b.name));
@@ -288,9 +313,9 @@ export default function Admin() {
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6 mb-12">
         <StatCard label="Total Revenue" value={formatCurrency(reportSummary.totalAmount)} />
+        <StatCard label="Platform Earnings" value={formatCurrency(reportSummary.totalCommission)} />
         <StatCard label="Active Branches" value={activeBranchesCount} />
         <StatCard label="Total Orders" value={reportSummary.count} />
-        <StatCard label="Avg. Order Value" value={reportSummary.count > 0 ? formatCurrency(reportSummary.totalAmount / reportSummary.count) : formatCurrency(0)} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -601,10 +626,7 @@ export default function Admin() {
               inventorySearch={inventorySearch}
               setInventorySearch={setInventorySearch}
               filteredInventory={filteredInventory}
-              stockInputs={stockInputs}
-              handleStockInputChange={handleStockInputChange}
-              adjustStock={adjustStock}
-              saveStockUpdate={saveStockUpdate}
+              toggleAvailability={toggleAvailability}
               handleDeleteProduct={handleDeleteProduct}
             />
           </motion.div>
@@ -718,15 +740,17 @@ export default function Admin() {
     // Standard QSR Cost Estimates
     const estimatedCogs = netSales * 0.35; // 35% Food Cost
     const operatingExpenses = netSales * 0.25; // 25% Labor, Rent, Utilities
+    const platformCommission = reportSummary.totalCommission || 0;
 
-    const netProfit = netSales - estimatedCogs - operatingExpenses;
+    const netProfit = netSales - estimatedCogs - operatingExpenses - platformCommission;
     const profitMargin = netSales > 0 ? ((netProfit / netSales) * 100).toFixed(1) : 0;
 
     // Data for P&L Donut Chart
     const pnlChartData = [
-      { name: 'Food Cost', value: estimatedCogs, fill: '#EF4444' },     // Red
-      { name: 'OpEx', value: operatingExpenses, fill: '#F59E0B' },       // Amber
-      { name: 'Net Profit', value: netProfit > 0 ? netProfit : 0, fill: '#10B981' } // Green
+      { name: 'Food Cost (Est)', value: estimatedCogs, fill: '#EF4444' },     // Red
+      { name: 'OpEx (Est)', value: operatingExpenses, fill: '#F59E0B' },       // Amber
+      { name: 'Platform Comm.', value: platformCommission, fill: '#3B82F6' }, // Blue
+      { name: 'Merchant Profit', value: Math.max(0, netProfit), fill: '#10B981' } // Green
     ];
 
     return (
@@ -761,10 +785,18 @@ export default function Admin() {
             <div className="flex justify-between items-center mb-4"><span className="text-[0.8rem] text-slate-500 font-bold uppercase tracking-wider">Net Sales</span></div>
             <div className="text-[1.75rem] text-slate-900 font-extrabold tracking-tight">{formatCurrency(netSales)}</div>
           </div>
+          <div className="bg-blue-50 rounded-2xl border border-blue-100 p-6 flex flex-col shadow-[0_4px_10px_rgba(59,130,246,0.1)]">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-[0.8rem] text-blue-600 font-bold uppercase tracking-wider">Platform Earnings</span>
+              <span className="text-[0.7rem] bg-blue-100 px-1.5 py-0.5 rounded font-bold text-blue-600 space-x-1">ADMN</span>
+            </div>
+            <div className="text-[1.75rem] text-blue-600 font-extrabold tracking-tight">{formatCurrency(platformCommission)}</div>
+            <div className="text-[0.85rem] text-blue-500 font-bold mt-1">15% Fee</div>
+          </div>
           <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-6 flex flex-col shadow-[0_4px_10px_rgba(16,185,129,0.1)]">
-            <div className="flex justify-between items-center mb-4"><span className="text-[0.8rem] text-emerald-600 font-bold uppercase tracking-wider">Est. Net Profit</span></div>
+            <div className="flex justify-between items-center mb-4"><span className="text-[0.8rem] text-emerald-600 font-bold uppercase tracking-wider">Merchant Net Profit</span></div>
             <div className="text-[1.75rem] text-emerald-600 font-extrabold tracking-tight">{formatCurrency(netProfit)}</div>
-            <div className="text-[0.85rem] text-emerald-600 font-extrabold mt-1">{profitMargin}% Margin</div>
+            <div className="text-[0.85rem] text-emerald-600 font-extrabold mt-1">{profitMargin}% Net Margin</div>
           </div>
         </div>
 
@@ -801,12 +833,16 @@ export default function Admin() {
                   <span className="text-red-500 font-bold text-[0.95rem]">(-) Food Cost (Est. 35%)</span>
                   <span className="font-bold text-red-500">{formatCurrency(estimatedCogs)}</span>
                 </div>
-                <div className="flex justify-between pb-2.5 border-b-2 border-slate-200">
+                <div className="flex justify-between pb-2.5 border-b border-dashed border-slate-200">
                   <span className="text-amber-500 font-bold text-[0.95rem]">(-) Operating Expenses (Est. 25%)</span>
                   <span className="font-bold text-amber-500">{formatCurrency(operatingExpenses)}</span>
                 </div>
+                <div className="flex justify-between pb-2.5 border-b-2 border-slate-200">
+                  <span className="text-blue-500 font-bold text-[0.95rem]">(-) Platform Commission (15%)</span>
+                  <span className="font-bold text-blue-500">{formatCurrency(platformCommission)}</span>
+                </div>
                 <div className="flex justify-between pt-2">
-                  <span className="text-emerald-500 font-extrabold text-[1.2rem]">Net Profit</span>
+                  <span className="text-emerald-500 font-extrabold text-[1.2rem]">Merchant Net Profit</span>
                   <span className="font-extrabold text-emerald-500 text-[1.2rem]">{formatCurrency(netProfit)}</span>
                 </div>
               </div>
@@ -942,10 +978,7 @@ export default function Admin() {
           inventorySearch={inventorySearch}
           setInventorySearch={setInventorySearch}
           filteredInventory={filteredInventory}
-          stockInputs={stockInputs}
-          handleStockInputChange={handleStockInputChange}
-          adjustStock={adjustStock}
-          saveStockUpdate={saveStockUpdate}
+          toggleAvailability={toggleAvailability}
           handleDeleteProduct={handleDeleteProduct}
         />
       </div>
@@ -1082,6 +1115,16 @@ export default function Admin() {
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText={confirmConfig.confirmText}
+        type={confirmConfig.type}
+      />
     </div>
   );
 }

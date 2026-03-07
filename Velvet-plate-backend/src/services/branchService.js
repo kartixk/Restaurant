@@ -230,6 +230,24 @@ const verifyBranch = async (id, status) => {
 };
 
 
+const getPublicBranches = async () => {
+    return await prisma.branch.findMany({
+        where: {
+            isVisible: true,
+            storeStatus: 'verified'
+        },
+        select: {
+            id: true,
+            name: true,
+            branchName: true,
+            city: true,
+            location: true,
+            storeImageUrl: true
+        }
+    });
+};
+
+
 module.exports = {
     createBranch,
     getBranches,
@@ -239,5 +257,6 @@ module.exports = {
     deleteBranch,
     onboardBranch,
     toggleVisibility,
-    verifyBranch
+    verifyBranch,
+    getPublicBranches
 };

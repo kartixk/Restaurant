@@ -135,6 +135,15 @@ const verifyBranch = async (req, res, next) => {
     }
 };
 
+const getPublicBranches = async (req, res, next) => {
+    try {
+        const branches = await branchService.getPublicBranches();
+        res.status(200).json(branches);
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     createBranch,
     getAllBranches,
@@ -145,5 +154,6 @@ module.exports = {
     onboardBranch,
     uploadDocuments,
     toggleVisibility,
-    verifyBranch
+    verifyBranch,
+    getPublicBranches
 };

@@ -33,8 +33,22 @@ const updateProductById = async (req, res, next) => {
 
 const deleteProductById = async (req, res, next) => {
     try {
-        await productService.deleteProductById(req.params.id);
-        res.status(200).json({ message: "Product deleted successfully" });
+        const role = req.user.role.toUpperCase();
+        let branchIdToUpdate = null;
+
+        if (role === 'MANAGER') {
+            const user = await prisma.user.findUnique({
+                where: { id: req.user.id },
+                include: { managedBranch: true }
+            });
+            if (!user || !user.managedBranch) {
+                return res.status(403).json({ message: "Manager does not have an assigned branch." });
+            }
+            branchIdToUpdate = user.managedBranch.id;
+        }
+
+        await productService.deleteProductById(req.params.id, branchIdToUpdate, role);
+        res.status(200).json({ message: "Product deleted/unlinked successfully" });
     } catch (err) {
         next(err);
     }

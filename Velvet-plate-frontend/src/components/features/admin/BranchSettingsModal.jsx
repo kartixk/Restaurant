@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useUpdateBranch } from "../../../hooks/useBranches";
 import { toast } from "react-toastify";
 import { Store, MapPin, Phone, ShieldCheck, Eye, EyeOff, X, Save, Trash2, Map, Navigation } from "lucide-react";
+import ConfirmationModal from "../../ui/ConfirmationModal";
 
 export default function BranchSettingsModal({ isOpen, onClose, branch }) {
     const updateBranchMutation = useUpdateBranch();
@@ -20,6 +21,14 @@ export default function BranchSettingsModal({ isOpen, onClose, branch }) {
         fssaiLicense: "",
         isVisible: false,
         storeStatus: "pending"
+    });
+
+    const [confirmConfig, setConfirmConfig] = useState({
+        isOpen: false,
+        title: "",
+        message: "",
+        onConfirm: () => { },
+        type: "orange"
     });
 
     useEffect(() => {
@@ -51,18 +60,27 @@ export default function BranchSettingsModal({ isOpen, onClose, branch }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        updateBranchMutation.mutate(
-            { id: branch.id, data: formData },
-            {
-                onSuccess: () => {
-                    toast.success("Branch master settings synchronized.");
-                    onClose();
-                },
-                onError: (err) => {
-                    toast.error(err?.response?.data?.message || "Configuration update failed");
-                }
+        setConfirmConfig({
+            isOpen: true,
+            title: "Synchronize Config",
+            message: "Are you sure you want to update these branch settings? This will synchronize all master configurations for this location.",
+            confirmText: "Yes, Synchronize",
+            type: "orange",
+            onConfirm: () => {
+                updateBranchMutation.mutate(
+                    { id: branch.id, data: formData },
+                    {
+                        onSuccess: () => {
+                            toast.success("Branch master settings synchronized.");
+                            onClose();
+                        },
+                        onError: (err) => {
+                            toast.error(err?.response?.data?.message || "Configuration update failed");
+                        }
+                    }
+                );
             }
-        );
+        });
     };
 
     if (!isOpen) return null;
@@ -219,6 +237,16 @@ export default function BranchSettingsModal({ isOpen, onClose, branch }) {
                         </div>
                     </form>
                 </motion.div>
+
+                <ConfirmationModal
+                    isOpen={confirmConfig.isOpen}
+                    onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+                    onConfirm={confirmConfig.onConfirm}
+                    title={confirmConfig.title}
+                    message={confirmConfig.message}
+                    confirmText={confirmConfig.confirmText}
+                    type={confirmConfig.type}
+                />
             </div>
         </AnimatePresence>
     );

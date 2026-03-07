@@ -16,7 +16,6 @@ router.get("/", productController.getAllProducts);
 router.post(
   "/",
   authMiddleware,
-  requireAdmin,
   validate(productSchema),
   productController.upsertProduct
 );
@@ -24,12 +23,11 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
-  requireAdmin,
   validate(productUpdateSchema),
   productController.updateProductById
 );
 
-router.delete("/:id", authMiddleware, requireAdmin, productController.deleteProductById);
+router.delete("/:id", authMiddleware, productController.deleteProductById);
 
 router.post(
   "/:id/purchase",

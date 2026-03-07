@@ -11,16 +11,16 @@ const useCartStore = create((set) => ({
     }),
 
     // QSR Core Feature: Dine-in vs Takeaway
-    orderType: 'DINE_IN', // Default
+    orderType: 'DINE_IN',
     setOrderType: (type) => set({ orderType: type }),
+
+    // Payment Strategy
+    paymentMethod: 'CASH', // Default
+    setPaymentMethod: (method) => set({ paymentMethod: method }),
 
     // Global cart data from DB
     cart: { items: [], total: 0 },
     setCart: (cartData) => set({ cart: cartData }),
-
-    // UI state for Cart Drawer (Preserved from original implementation)
-    isCartOpen: false,
-    setIsCartOpen: (isOpen) => set({ isCartOpen: isOpen }),
 }));
 
 export default useCartStore;

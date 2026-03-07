@@ -65,7 +65,8 @@ exports.updateOrderType = async (req, res, next) => {
 exports.confirmOrder = async (req, res, next) => {
     try {
         const userId = req.user.id || req.user._id;
-        const result = await cartService.confirmOrder(userId);
+        const { paymentMethod, branchId } = req.body;
+        const result = await cartService.confirmOrder(userId, paymentMethod, branchId);
         res.status(201).json(result);
     } catch (error) {
         next(error);
