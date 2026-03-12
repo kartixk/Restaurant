@@ -47,6 +47,7 @@ export default function Navbar() {
   };
 
   const navLinks = [
+    { name: "HOME", path: "/" },
     { name: "MENU", path: "/menu" },
     { name: "TRACK ORDER", path: "/orders" },
   ];

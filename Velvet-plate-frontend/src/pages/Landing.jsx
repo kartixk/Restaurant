@@ -539,7 +539,7 @@ export default function Landing() {
                             >
                                 <div className="text-stone-900 font-black text-2xl leading-none" style={{ fontFamily: "'Playfair Display',serif" }}>4.9</div>
                                 <div>
-                                    <div className="flex gap-0.5 mb-0.5">{[1,2,3,4,5].map(s => <Star key={s} size={10} className="text-amber-400 fill-amber-400" />)}</div>
+                                    <div className="flex gap-0.5 mb-0.5">{[1, 2, 3, 4, 5].map(s => <Star key={s} size={10} className="text-amber-400 fill-amber-400" />)}</div>
                                     <div className="text-stone-400 text-[9px] font-bold uppercase tracking-widest">50k+ Reviews</div>
                                 </div>
                             </motion.div>
@@ -549,7 +549,7 @@ export default function Landing() {
                         <div className="absolute right-0 -top-4 w-[210px] h-[230px]" style={{ zIndex: 2 }}>
                             {/* Image card */}
                             <motion.div
-                                animate={{ y: [0,-8,0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                                animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                                 className="w-full h-full rounded-3xl overflow-hidden"
                                 style={{ boxShadow: "0 16px 48px rgba(0,0,0,0.18)" }}
                             >
@@ -581,7 +581,7 @@ export default function Landing() {
                         <div className="absolute right-0 bottom-8 w-[230px] h-[200px]" style={{ zIndex: 2 }}>
                             {/* Image card */}
                             <motion.div
-                                animate={{ y: [0,5,0] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                                animate={{ y: [0, 5, 0] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                                 className="w-full h-full rounded-3xl overflow-hidden"
                                 style={{ boxShadow: "0 16px 48px rgba(0,0,0,0.18)" }}
                             >
@@ -607,8 +607,8 @@ export default function Landing() {
                                     <div className="text-stone-400 text-[9px]">Pizza · 1 min ago</div>
                                 </div>
                                 <motion.div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"
-                                    animate={{ scale:[1,1.6,1], opacity:[1,0.3,1] }}
-                                    transition={{ duration:1.8, repeat:Infinity }} />
+                                    animate={{ scale: [1, 1.6, 1], opacity: [1, 0.3, 1] }}
+                                    transition={{ duration: 1.8, repeat: Infinity }} />
                             </motion.div>
                         </div>
                     </motion.div>
