@@ -101,7 +101,9 @@ export default function LocationPickerModal({ isOpen, onClose, forceSelection = 
                                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                                         <MapPin size={24} className="text-slate-200" />
                                     </div>
-                                    <p className="font-bold text-slate-900 mb-1">No branches found</p>
+                                    <p className="font-bold text-slate-900 mb-1">
+                                        {searchTerm ? "Sorry we are not available in this location" : "No branches found"}
+                                    </p>
                                     <p className="text-slate-400 text-sm">Try searching for a different area or city.</p>
                                 </div>
                             ) : (
