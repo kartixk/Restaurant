@@ -997,8 +997,13 @@ export default function Admin() {
 
           {/* Logo Header inside Sidebar */}
           <div className={`h-[72px] flex items-center border-b border-slate-200 flex-shrink-0 ${isSidebarCollapsed ? "justify-center px-0" : "justify-start px-5"}`}>
-            <div className="w-9 h-9 rounded-xl bg-[#FF5A00] text-white flex items-center justify-center font-black text-xl flex-shrink-0">V</div>
-            {!isSidebarCollapsed && <span className="text-slate-900 font-extrabold tracking-tight text-xl whitespace-nowrap ml-3">Velvet Plate</span>}
+            <img src="/Velvet_Plate_v2.png" alt="Logo" className="w-9 h-9 object-contain drop-shadow-sm" />
+            {!isSidebarCollapsed && (
+              <span className="text-slate-900 font-extrabold tracking-tight text-xl whitespace-nowrap ml-3"
+                    style={{ fontFamily: "'Playfair Display', serif" }}>
+                Velvet Plate
+              </span>
+            )}
           </div>
 
           <nav className="py-6 px-4 flex flex-col gap-2">

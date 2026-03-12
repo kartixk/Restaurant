@@ -70,9 +70,9 @@ export default function ManagerLayout({ children }) {
     if (loading) return (
         <div className="flex items-center justify-center h-screen w-screen bg-slate-50">
             <div className="flex flex-col items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#FF5A00] animate-pulse" />
-                <span className="text-sm text-slate-400 font-medium">Loading Partner Center...</span>
-            </div>
+            <img src="/Velvet_Plate_v2.png" alt="Logo" className="w-12 h-12 object-contain animate-pulse drop-shadow-xl" />
+            <span className="text-sm text-slate-400 font-medium tracking-wide uppercase" style={{ fontFamily: "'Playfair Display', serif" }}>Velvet Plate</span>
+        </div>
         </div>
     );
 
@@ -92,8 +92,13 @@ export default function ManagerLayout({ children }) {
 
                     {/* Logo */}
                     <div className={`h-[72px] flex items-center border-b border-slate-200 flex-shrink-0 ${isSidebarCollapsed ? "justify-center px-0" : "justify-start px-5"}`}>
-                        <div className="w-9 h-9 rounded-xl bg-[#FF5A00] text-white flex items-center justify-center font-black text-xl flex-shrink-0">V</div>
-                        {!isSidebarCollapsed && <span className="text-slate-900 font-extrabold tracking-tight text-xl whitespace-nowrap ml-3">Velvet Plate</span>}
+                        <img src="/Velvet_Plate_v2.png" alt="Logo" className="w-9 h-9 object-contain drop-shadow-sm" />
+                        {!isSidebarCollapsed && (
+                            <span className="text-slate-900 font-extrabold tracking-tight text-xl whitespace-nowrap ml-3"
+                                  style={{ fontFamily: "'Playfair Display', serif" }}>
+                                Velvet Plate
+                            </span>
+                        )}
                     </div>
 
                     {/* Nav */}

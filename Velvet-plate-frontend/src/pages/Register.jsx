@@ -92,9 +92,21 @@ export default function Register() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
       >
-        <div className="text-center">
-          <h2 className="text-3xl font-black text-slate-900 m-0 tracking-tight leading-none">Create Account</h2>
-          <p className="text-slate-500 font-medium mt-3 mb-0 text-sm">Join our premium restaurant ecosystem</p>
+        <div className="text-center flex flex-col items-center gap-4">
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 150 }}
+          >
+            <img src="/Velvet_Plate_v2.png" alt="Logo" className="w-16 h-16 object-contain drop-shadow-lg" />
+            <p className="m-0 text-slate-900 text-xl font-bold mt-2 tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Velvet Plate
+            </p>
+          </motion.div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 m-0 tracking-tight">Create Account</h2>
+            <p className="text-slate-500 font-medium mt-2 mb-0 text-sm">Join our premium dining ecosystem</p>
+          </div>
         </div>
 
         {/* Role Toggle Switch */}

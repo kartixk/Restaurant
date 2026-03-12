@@ -80,13 +80,16 @@ export default function Login() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-            className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center mb-1"
+            className="flex flex-col items-center gap-3"
           >
-            <KeyRound size={32} className="text-orange-600" strokeWidth={2.5} />
+            <img src="/Velvet_Plate_v2.png" alt="Velvet Plate Logo" className="w-16 h-16 object-contain drop-shadow-xl" />
+            <h1 className="text-slate-900 text-xl font-bold tracking-tight m-0" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Velvet Plate
+            </h1>
           </motion.div>
           <div>
-            <h2 className="text-3xl font-black text-slate-900 m-0 tracking-tight leading-none">Welcome Back</h2>
-            <p className="text-slate-500 font-medium mt-3 mb-0 text-sm">Sign in to access your partner dashboard</p>
+            <h2 className="text-2xl font-black text-slate-900 m-0 tracking-tight">Welcome Back</h2>
+            <p className="text-slate-500 font-medium mt-2 mb-0 text-sm">Sign in to your dashboard</p>
           </div>
         </div>
 
