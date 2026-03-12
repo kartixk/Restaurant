@@ -25,13 +25,51 @@ function Particle({ style }) {
     );
 }
 
+// ─── Warm Marquee ─────────────────────────────────────────────────────────────
+const MARQUEE_ITEMS = [
+    { icon: <Star size={11} fill="currentColor" />, text: "50,000+ Happy Diners" },
+    { icon: <Flame size={11} />, text: "Premium Quality" },
+    { icon: <Utensils size={11} />, text: "120+ Menu Items" },
+    { icon: <Clock size={11} />, text: "15 Min Delivery" },
+    { icon: <MapPin size={11} />, text: "12 Locations" },
+    { icon: <Sparkles size={11} />, text: "Chef Crafted" },
+    { icon: <Heart size={11} fill="currentColor" />, text: "Made With Love" },
+    { icon: <Shield size={11} />, text: "Farm Fresh Daily" },
+];
+function Marquee() {
+    const items = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS];
+    return (
+        <div className="relative overflow-hidden py-3.5" style={{
+            background: "linear-gradient(135deg, #FF5A00 0%, #f97316 50%, #fb923c 100%)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08)"
+        }}>
+            <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
+            {/* Pure CSS animation — runs on compositor thread, never jank */}
+            <div className="relative z-10" style={{ overflow: "hidden" }}>
+                <div
+                    className="flex gap-8 whitespace-nowrap"
+                    style={{ animation: "marqueeScroll 28s linear infinite", willChange: "transform", transform: "translateZ(0)" }}
+                >
+                    {items.map((item, i) => (
+                        <span key={i} className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] shrink-0 text-white/90">
+                            <span className="text-white/70">{item.icon}</span>
+                            {item.text}
+                            <span className="ml-5 text-white/30">✦</span>
+                        </span>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Animated counter — re-triggers every scroll ─────────────────────────────
 function AnimatedCounter({ target, suffix = "" }) {
     const [count, setCount] = useState(0);
     const ref = useRef(null);
-    const isInView = useInView(ref, { once: false, amount: 0.5 });
+    const isInView = useInView(ref, { once: true, amount: 0.5 });
     useEffect(() => {
-        if (!isInView) { setCount(0); return; }
+        if (!isInView) return;
         let start = 0;
         const step = target / (1600 / 16);
         const timer = setInterval(() => {
@@ -44,24 +82,31 @@ function AnimatedCounter({ target, suffix = "" }) {
     return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
 }
 
-// ─── FadeIn wrapper — re-animates every time element enters viewport ──────────
+// ─── FadeIn wrapper — smooth one-shot viewport animation ─────────────────────
 function FadeIn({ children, delay = 0, className = "", direction = "up" }) {
     const ref = useRef(null);
-    const isInView = useInView(ref, { once: false, margin: "-50px", amount: 0.15 });
+    const isInView = useInView(ref, { once: true, margin: "-60px", amount: 0.12 });
     const initial = {
-        up: { opacity: 0, y: 36 },
-        down: { opacity: 0, y: -36 },
-        left: { opacity: 0, x: -36 },
-        right: { opacity: 0, x: 36 },
+        up: { opacity: 0, y: 28 },
+        down: { opacity: 0, y: -28 },
+        left: { opacity: 0, x: -28 },
+        right: { opacity: 0, x: 28 },
     }[direction];
     const visible = direction === "up" || direction === "down"
         ? { opacity: 1, y: 0 }
         : { opacity: 1, x: 0 };
     return (
-        <motion.div ref={ref} className={className}
+        <motion.div
+            ref={ref}
+            className={className}
+            style={{ willChange: "opacity, transform" }}
             initial={initial}
             animate={isInView ? visible : initial}
-            transition={{ duration: 0.65, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={{
+                duration: 0.55,
+                delay,
+                ease: [0.22, 1, 0.36, 1],
+            }}
         >
             {children}
         </motion.div>
@@ -118,7 +163,20 @@ export default function Landing() {
     }, []);
 
     useEffect(() => {
-        return scrollY.on("change", v => setNavScrolled(v > 40));
+        let rafId = null;
+        let lastScrolled = false;
+        const unsubscribe = scrollY.on("change", v => {
+            if (rafId) return; // skip if a frame is already queued
+            rafId = requestAnimationFrame(() => {
+                const isScrolled = v > 40;
+                if (isScrolled !== lastScrolled) {
+                    lastScrolled = isScrolled;
+                    setNavScrolled(isScrolled);
+                }
+                rafId = null;
+            });
+        });
+        return () => { unsubscribe(); if (rafId) cancelAnimationFrame(rafId); };
     }, [scrollY]);
 
     const particles = [
@@ -228,236 +286,411 @@ export default function Landing() {
             </motion.nav>
 
             {/* ═══ HERO ═══ */}
-            <section ref={heroRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+            <section ref={heroRef} className="relative min-h-screen flex flex-col justify-center overflow-hidden" style={{ contain: "layout paint" }}>
 
-                {/* Background — warm ivory gradient */}
-                <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #fffbf5 0%, #fff8ee 30%, #fef3e8 60%, #fff5f0 100%)" }} />
-
-                {/* Subtle radial glows */}
-                <div className="absolute inset-0" style={{
-                    backgroundImage: `radial-gradient(ellipse at 15% 50%, rgba(255,90,0,0.07) 0%, transparent 55%),
-                                      radial-gradient(ellipse at 85% 20%, rgba(212,168,83,0.08) 0%, transparent 50%),
-                                      radial-gradient(ellipse at 55% 90%, rgba(249,115,22,0.05) 0%, transparent 50%)`
-                }} />
-
-                {/* Fine dot grid */}
-                <div className="absolute inset-0 opacity-[0.3]" style={{ backgroundImage: "radial-gradient(circle, #d6b896 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-
-                {/* Floating particles */}
+                {/* ── Rich layered background ── */}
+                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#fffaf4 0%,#fff7ec 40%,#fef0da 70%,#fffbf5 100%)" }} />
+                <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(ellipse at 5% 50%,rgba(255,90,0,0.13) 0%,transparent 55%), radial-gradient(ellipse at 95% 10%,rgba(212,168,83,0.16) 0%,transparent 50%), radial-gradient(ellipse at 60% 100%,rgba(249,115,22,0.09) 0%,transparent 45%)` }} />
+                <div className="absolute inset-0 opacity-[0.18]" style={{ backgroundImage: "radial-gradient(circle,#c8996a 1px,transparent 1px)", backgroundSize: "32px 32px" }} />
                 {particles.map((p, i) => <Particle key={i} style={p} />)}
 
-                {/* Soft glow orbs */}
-                <motion.div className="absolute top-1/3 left-1/5 w-[520px] h-[520px] rounded-full pointer-events-none"
-                    style={{ background: "radial-gradient(circle, rgba(255,90,0,0.06) 0%, transparent 70%)" }}
-                    animate={{ scale: [1, 1.12, 1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }} />
-                <motion.div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full pointer-events-none"
-                    style={{ background: "radial-gradient(circle, rgba(212,168,83,0.07) 0%, transparent 70%)" }}
-                    animate={{ scale: [1.1, 1, 1.1] }} transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }} />
+                {/* ── Glow orbs ── */}
+                <div className="absolute -top-32 -left-32 w-[700px] h-[700px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle,rgba(255,90,0,0.10) 0%,transparent 65%)" }} />
+                <div className="absolute -bottom-20 -right-20 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle,rgba(212,168,83,0.13) 0%,transparent 65%)" }} />
 
-                {/* Content */}
-                <motion.div style={{ y: heroY, opacity: heroOpacity }}
-                    className="relative z-10 flex flex-col items-center text-center px-6 max-w-5xl mx-auto pt-24"
+                {/* ═══════════ SPLIT LAYOUT ═══════════ */}
+                <motion.div
+                    style={{ y: heroY, willChange: "transform" }}
+                    className="relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-16 pt-28 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-10 items-center"
                 >
-                    {/* Premium badge */}
-                    <motion.div
-                        initial={{ opacity: 0, y: -16, scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ duration: 0.6, delay: 0.1 }}
-                        className="flex items-center gap-2 px-5 py-2 rounded-full mb-10 border"
-                        style={{ background: "rgba(255,90,0,0.06)", borderColor: "rgba(255,90,0,0.18)" }}
-                    >
-                        <motion.span animate={{ rotate: [0, 15, -15, 0] }} transition={{ duration: 2.5, repeat: Infinity }}>
-                            <Flame size={13} className="text-orange-500" />
-                        </motion.span>
-                        <span className="text-orange-700 text-[11px] font-bold uppercase tracking-[0.22em]">Premium Dining Experience</span>
-                    </motion.div>
+                    {/* ══ LEFT COLUMN ══ */}
+                    <div className="flex flex-col items-start">
 
-                    {/* Logo */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-                    >
-                        <motion.img
-                            src="/Velvet_Plate_v2.png"
-                            alt="Velvet Plate"
-                            className="w-32 h-32 md:w-40 md:h-40 object-contain mx-auto mb-6 cursor-pointer"
-                            style={{ filter: "drop-shadow(0 12px 36px rgba(255,90,0,0.28)) drop-shadow(0 4px 12px rgba(0,0,0,0.08))" }}
-                            animate={{ y: [0, -8, 0] }}
-                            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-                            whileHover={{
-                                scale: 1.12,
-                                filter: "drop-shadow(0 18px 48px rgba(255,90,0,0.45)) drop-shadow(0 4px 12px rgba(0,0,0,0.12))",
-                                rotate: [0, -3, 3, 0],
-                                transition: { duration: 0.4, ease: "easeOut" }
+
+
+                        {/* ── Brand Identity Block ── */}
+                        <motion.div
+                            className="flex flex-col items-start mb-6"
+                            initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.12 }}
+                        >
+                            {/* Logo orb + tagline row */}
+                            <div className="flex items-center gap-3 mb-3">
+                                <motion.div
+                                    className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                                    style={{
+                                        background: "linear-gradient(135deg,#FF5A00,#f97316)",
+                                        boxShadow: "0 8px 32px rgba(255,90,0,0.45)",
+                                    }}
+                                    animate={{ opacity: [1, 0.82, 1] }}
+                                    transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+                                >
+                                    <motion.img
+                                        src="/Velvet_Plate_v2.png" alt="Velvet Plate"
+                                        className="w-8 h-8 object-contain"
+                                        animate={{ y: [0, -3, 0] }}
+                                        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                                    />
+                                </motion.div>
+                                <div className="flex items-center gap-2">
+                                    <div className="h-px w-6" style={{ background: "linear-gradient(to right,#D4A853,transparent)" }} />
+                                    <span style={{ fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.22em", color: "#c2873a", textTransform: "uppercase" }}>
+                                        ✦ Fine Dining · Est. 2024 ✦
+                                    </span>
+                                    <div className="h-px w-6" style={{ background: "linear-gradient(to left,#D4A853,transparent)" }} />
+                                </div>
+                            </div>
+
+                            {/* The name — BIG and golden */}
+                            <motion.h1
+                                style={{
+                                    fontFamily: "'Playfair Display', serif",
+                                    fontSize: "clamp(2.6rem, 5vw, 4.2rem)",
+                                    fontWeight: 900,
+                                    letterSpacing: "-0.02em",
+                                    lineHeight: 1,
+                                    color: "#FF5A00",
+                                }}
+                                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.85, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                            >
+                                Velvet Plate
+                            </motion.h1>
+
+                            {/* Decorative gold underline */}
+                            <motion.div
+                                className="mt-2 h-0.5 rounded-full"
+                                style={{ background: "linear-gradient(to right,#FF5A00,#D4A853,transparent)" }}
+                                initial={{ width: 0 }} animate={{ width: "75%" }}
+                                transition={{ duration: 0.9, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                            />
+                        </motion.div>
+
+                        {/* Large italic hero headline */}
+                        <motion.h2
+                            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                            style={{
+                                fontFamily: "'Playfair Display', serif",
+                                fontSize: "clamp(2.8rem,5.5vw,4.8rem)",
+                                fontWeight: 400,
+                                fontStyle: "italic",
+                                color: "#1c1917",
+                                letterSpacing: "-0.025em",
+                                lineHeight: 1.1,
+                                marginBottom: "0.2em",
                             }}
-                            whileTap={{ scale: 0.95 }}
-                        />
-                    </motion.div>
+                        >
+                            Where Every<br />Bite
+                        </motion.h2>
 
-                    {/* Brand wordmark */}
-                    <motion.h2
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.7, delay: 0.3 }}
-                        className="mb-3"
-                        style={{
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "clamp(2.6rem, 6vw, 5rem)",
-                            fontWeight: 700,
-                            letterSpacing: "-0.02em",
-                            lineHeight: 1,
-                            background: "linear-gradient(135deg, #92400e 0%, #D4A853 40%, #f59e0b 65%, #92400e 100%)",
-                            backgroundSize: "200% auto",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            backgroundClip: "text",
-                            animation: "goldShimmer 5s linear infinite",
-                        }}
-                    >
-                        Velvet Plate
-                    </motion.h2>
-
-                    {/* Rolling headline */}
-                    <motion.h1
-                        initial={{ opacity: 0, y: 24 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.4 }}
-                        className="mb-6"
-                        style={{
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "clamp(2rem, 5.5vw, 4.2rem)",
-                            fontWeight: 400,
-                            fontStyle: "italic",
-                            color: "#1c1917",
-                            letterSpacing: "-0.01em",
-                            lineHeight: 1.15,
-                        }}
-                    >
-                        Where Every Bite
-                        <span className="block relative" style={{ height: "1.4em", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {/* Rolling word — NOT inside overflow:hidden, no clipping */}
+                        <motion.div
+                            initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.7, delay: 0.38 }}
+                            style={{ minHeight: "5.5rem", display: "flex", alignItems: "center", marginBottom: "1.5rem" }}
+                        >
                             <AnimatePresence mode="wait">
-                                <motion.span
+                                <motion.div
                                     key={activeWord}
-                                    initial={{ y: 28, opacity: 0, filter: "blur(6px)" }}
-                                    animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-                                    exit={{ y: -22, opacity: 0, filter: "blur(6px)" }}
-                                    transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
-                                    className="inline-block absolute whitespace-nowrap not-italic font-bold"
-                                    style={{ background: ROLLING_WORDS[activeWord].gradient, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontFamily: "'Playfair Display', serif" }}
+                                    initial={{ y: 70, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: -50, opacity: 0 }}
+                                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                                    style={{
+                                        fontFamily: "'Playfair Display', serif",
+                                        fontSize: "clamp(2.8rem,5.5vw,4.8rem)",
+                                        fontWeight: 900,
+                                        letterSpacing: "-0.03em",
+                                        lineHeight: 1.2,
+                                        paddingTop: "0.05em",
+                                        paddingBottom: "0.15em",
+                                        background: ROLLING_WORDS[activeWord].gradient,
+                                        WebkitBackgroundClip: "text",
+                                        WebkitTextFillColor: "transparent",
+                                        backgroundClip: "text",
+                                        whiteSpace: "nowrap",
+                                        display: "block",
+                                    }}
                                 >
                                     {ROLLING_WORDS[activeWord].text}
-                                </motion.span>
+                                </motion.div>
                             </AnimatePresence>
-                        </span>
-                    </motion.h1>
+                        </motion.div>
 
-                    {/* Sub-headline */}
-                    <motion.p
-                        initial={{ opacity: 0, y: 18 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.7, delay: 0.52 }}
-                        className="text-stone-500 text-lg md:text-xl font-light max-w-xl mb-10 leading-relaxed"
-                        style={{ fontFamily: "'Inter', sans-serif" }}
-                    >
-                        Curated menus. Chef-quality dishes. Delivered to your table or ready for takeaway — with the premium touch you deserve.
-                    </motion.p>
-
-                    {/* CTAs */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.7, delay: 0.64 }}
-                        className="flex flex-col sm:flex-row items-center gap-4 mb-16"
-                    >
-                        <motion.button
-                            onClick={() => navigate("/menu")}
-                            whileHover={{ scale: 1.04, boxShadow: "0 18px 52px rgba(255,90,0,0.30)" }}
-                            whileTap={{ scale: 0.97 }}
-                            className="group flex items-center gap-3 px-10 py-4 rounded-full font-bold text-white text-sm uppercase tracking-widest shadow-lg shadow-orange-500/20"
-                            style={{ background: "linear-gradient(135deg, #FF5A00, #f97316)" }}
+                        {/* Sub-headline */}
+                        <motion.p
+                            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.7, delay: 0.50 }}
+                            className="text-stone-500 text-base md:text-lg leading-relaxed max-w-md mb-9"
+                            style={{ fontFamily: "'Inter', sans-serif", fontWeight: 300 }}
                         >
-                            <Utensils size={16} />
-                            Explore Menu
-                            <motion.span animate={{ x: [0, 4, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                                <ChevronRight size={16} />
-                            </motion.span>
-                        </motion.button>
+                            Chef-crafted dishes, sourced fresh daily. Dine in or get it delivered in under 15 minutes — without compromising on taste.
+                        </motion.p>
 
-                        <motion.button
-                            onClick={() => navigate("/login")}
-                            whileHover={{ scale: 1.03, borderColor: "#FF5A00", color: "#FF5A00" }}
-                            whileTap={{ scale: 0.97 }}
-                            className="flex items-center gap-2 px-10 py-4 rounded-full font-bold text-stone-700 text-sm uppercase tracking-widest border border-stone-300 bg-white/70 backdrop-blur-sm hover:shadow-md transition-all duration-300"
+                        {/* CTAs */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.7, delay: 0.62 }}
+                            className="flex flex-wrap items-center gap-4 mb-10"
                         >
-                            Sign In
-                        </motion.button>
-                    </motion.div>
+                            <motion.button
+                                onClick={() => navigate("/menu")}
+                                whileHover={{ scale: 1.04, boxShadow: "0 20px 56px rgba(255,90,0,0.38)" }}
+                                whileTap={{ scale: 0.97 }}
+                                className="flex items-center gap-3 px-9 py-4 rounded-2xl font-bold text-white text-sm uppercase tracking-widest"
+                                style={{ background: "linear-gradient(135deg,#FF5A00,#f97316)", boxShadow: "0 8px 32px rgba(255,90,0,0.30), inset 0 1px 0 rgba(255,255,255,0.20)" }}
+                            >
+                                <Utensils size={16} />
+                                Explore Menu
+                                <motion.span animate={{ x: [0, 5, 0] }} transition={{ duration: 1.4, repeat: Infinity }}>
+                                    <ArrowRight size={15} />
+                                </motion.span>
+                            </motion.button>
 
-                    {/* Trust badges */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.7, delay: 0.82 }}
-                        className="flex flex-wrap items-center justify-center gap-8"
-                    >
-                        {[
-                            { icon: <Star size={13} fill="currentColor" />, label: "4.9 / 5 Rating", color: "text-amber-500" },
-                            { icon: <Clock size={13} />, label: "15 min delivery", color: "text-orange-500" },
-                            { icon: <MapPin size={13} />, label: "12+ Locations", color: "text-rose-500" },
-                        ].map((b, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                                <span className={b.color}>{b.icon}</span>
-                                <span className="text-stone-400 text-xs font-semibold tracking-wide">{b.label}</span>
+                            <motion.button
+                                onClick={() => navigate("/login")}
+                                whileHover={{ scale: 1.03, borderColor: "#FF5A00", color: "#FF5A00" }}
+                                whileTap={{ scale: 0.97 }}
+                                className="flex items-center gap-2 px-9 py-4 rounded-2xl font-bold text-stone-700 text-sm uppercase tracking-widest border border-stone-200 bg-white/70 backdrop-blur-sm transition-all duration-300"
+                            >
+                                Sign In
+                            </motion.button>
+                        </motion.div>
+
+                        {/* Stats row */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.7, delay: 0.74 }}
+                            className="flex items-center gap-6 mb-8 flex-wrap"
+                        >
+                            {[
+                                { value: "4.9★", label: "Rating", color: "#f59e0b" },
+                                { value: "50k+", label: "Diners", color: "#FF5A00" },
+                                { value: "12+", label: "Locations", color: "#10b981" },
+                            ].map((s, i) => (
+                                <div key={i}>
+                                    <div className="font-black text-xl leading-none mb-0.5" style={{ fontFamily: "'Playfair Display',serif", color: s.color }}>{s.value}</div>
+                                    <div className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">{s.label}</div>
+                                </div>
+                            ))}
+                            <div className="w-px h-10 bg-stone-200 hidden sm:block" />
+                            <div className="flex items-center gap-2">
+                                <div className="flex -space-x-2.5">
+                                    {["#f97316", "#8b5cf6", "#ec4899", "#10b981", "#3b82f6"].map((c, i) => (
+                                        <div key={i} className="w-8 h-8 rounded-full border-2 border-white" style={{ background: c }} />
+                                    ))}
+                                </div>
+                                <div className="text-stone-400 text-[11px] font-semibold leading-tight">
+                                    Loved by<br /><strong className="text-stone-700">50,000+</strong>
+                                </div>
                             </div>
-                        ))}
+                        </motion.div>
+
+                        {/* Feature chips */}
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                            transition={{ duration: 0.7, delay: 0.88 }}
+                            className="flex flex-wrap gap-2"
+                        >
+                            {[
+                                { icon: <Zap size={11} />, label: "< 15 min delivery", c: "text-amber-700 bg-amber-50 border-amber-200" },
+                                { icon: <Shield size={11} />, label: "Farm Fresh · No Preservatives", c: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+                                { icon: <Sparkles size={11} />, label: "120+ Unique Dishes", c: "text-violet-700 bg-violet-50 border-violet-200" },
+                            ].map((f, i) => (
+                                <span key={i} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-semibold ${f.c}`}>
+                                    {f.icon}{f.label}
+                                </span>
+                            ))}
+                        </motion.div>
+                    </div>
+                    {/* ══ RIGHT COLUMN — 3 food cards, each with 1 floating chip ══ */}
+                    <motion.div
+                        initial={{ opacity: 0, x: 60 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="relative hidden lg:block h-[600px] -mt-16"
+                    >
+                        {/* ── Card 1: Pasta (main, large) + Rating chip ── */}
+                        <div className="absolute left-0 top-0 w-[280px] h-[330px]" style={{ zIndex: 2 }}>
+                            {/* Image card */}
+                            <motion.div
+                                whileHover={{ scale: 1.02 }}
+                                transition={{ duration: 0.35 }}
+                                className="w-full h-full rounded-3xl overflow-hidden"
+                                style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.20), 0 6px 20px rgba(255,90,0,0.14)" }}
+                            >
+                                <img src="/food/pasta.png" alt="Truffle Pasta" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(12,5,0,0.82) 0%,rgba(0,0,0,0.05) 55%,transparent 100%)" }} />
+                                <div className="absolute bottom-0 left-0 right-0 p-5">
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest text-white mb-2 inline-block" style={{ background: "linear-gradient(135deg,#FF5A00,#f97316)" }}>★ Chef's Pick</span>
+                                    <div className="text-white font-black text-xl leading-tight" style={{ fontFamily: "'Playfair Display',serif" }}>Truffle Pasta</div>
+                                    <div className="flex items-center justify-between mt-2">
+                                        <span className="text-white/60 text-xs">Al dente · Truffle cream</span>
+                                        <span className="text-orange-300 font-black text-sm">₹549</span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                            {/* Rating chip — attached below-left of pasta card */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 1.0, duration: 0.5 }}
+                                className="absolute -bottom-14 left-4 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border border-white/80 shadow-xl backdrop-blur-xl"
+                                style={{ background: "rgba(255,255,255,0.95)" }}
+                            >
+                                <div className="text-stone-900 font-black text-2xl leading-none" style={{ fontFamily: "'Playfair Display',serif" }}>4.9</div>
+                                <div>
+                                    <div className="flex gap-0.5 mb-0.5">{[1,2,3,4,5].map(s => <Star key={s} size={10} className="text-amber-400 fill-amber-400" />)}</div>
+                                    <div className="text-stone-400 text-[9px] font-bold uppercase tracking-widest">50k+ Reviews</div>
+                                </div>
+                            </motion.div>
+                        </div>
+
+                        {/* ── Card 2: Burger (top right) + Delivery chip ── */}
+                        <div className="absolute right-0 -top-4 w-[210px] h-[230px]" style={{ zIndex: 2 }}>
+                            {/* Image card */}
+                            <motion.div
+                                animate={{ y: [0,-8,0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                                className="w-full h-full rounded-3xl overflow-hidden"
+                                style={{ boxShadow: "0 16px 48px rgba(0,0,0,0.18)" }}
+                            >
+                                <img src="/food/burger.png" alt="Smash Burger" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.70) 0%,transparent 55%)" }} />
+                                <div className="absolute bottom-3 left-4">
+                                    <div className="text-white font-black text-base leading-tight" style={{ fontFamily: "'Playfair Display',serif" }}>Smash Burger</div>
+                                    <div className="text-white/60 text-[10px]">Handcrafted patty</div>
+                                </div>
+                            </motion.div>
+                            {/* Delivery chip — attached at top-left of burger card */}
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 1.1, duration: 0.5 }}
+                                className="absolute -top-3 -left-4 flex items-center gap-2 px-3 py-2 rounded-xl border border-white/80 shadow-xl backdrop-blur-xl"
+                                style={{ background: "rgba(255,255,255,0.95)" }}
+                            >
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#FF5A00,#f97316)" }}>
+                                    <Zap size={11} className="text-white" />
+                                </div>
+                                <div>
+                                    <div className="text-stone-900 font-black text-xs leading-none" style={{ fontFamily: "'Playfair Display',serif" }}>&lt;15 min</div>
+                                    <div className="text-stone-400 text-[8px] font-bold uppercase tracking-widest">delivery</div>
+                                </div>
+                            </motion.div>
+                        </div>
+
+                        {/* ── Card 3: Dessert (bottom right) + Live order toast ── */}
+                        <div className="absolute right-0 bottom-8 w-[230px] h-[200px]" style={{ zIndex: 2 }}>
+                            {/* Image card */}
+                            <motion.div
+                                animate={{ y: [0,5,0] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                                className="w-full h-full rounded-3xl overflow-hidden"
+                                style={{ boxShadow: "0 16px 48px rgba(0,0,0,0.18)" }}
+                            >
+                                <img src="/food/dessert.png" alt="Dessert" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(0,0,0,0.70) 0%,transparent 60%)" }} />
+                                <div className="absolute bottom-3 left-4">
+                                    <div className="text-white font-black text-base leading-tight" style={{ fontFamily: "'Playfair Display',serif" }}>Sweet Finish</div>
+                                </div>
+                            </motion.div>
+                            {/* Live order toast — attached at top-left of dessert card */}
+                            <motion.div
+                                initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 1.3, duration: 0.6 }}
+                                className="absolute -top-4 -left-4 flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border border-white/80 shadow-xl backdrop-blur-xl"
+                                style={{ background: "rgba(255,255,255,0.95)", zIndex: 5 }}
+                            >
+                                <div className="relative w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
+                                    <img src="/food/pizza.png" alt="order" className="w-full h-full object-cover" />
+                                    <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 5px #34d399" }} />
+                                </div>
+                                <div>
+                                    <div className="text-stone-800 font-bold text-[11px]">Just ordered!</div>
+                                    <div className="text-stone-400 text-[9px]">Pizza · 1 min ago</div>
+                                </div>
+                                <motion.div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"
+                                    animate={{ scale:[1,1.6,1], opacity:[1,0.3,1] }}
+                                    transition={{ duration:1.8, repeat:Infinity }} />
+                            </motion.div>
+                        </div>
                     </motion.div>
+
+                </motion.div>
+                {/* Mobile food preview */}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.55 }}
+                    className="lg:hidden relative z-10 mx-6 mb-10 rounded-3xl overflow-hidden h-56 shadow-2xl"
+                >
+                    <img src="/food/pasta.png" alt="Signature dish" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(15,8,0,0.72) 0%,transparent 60%)" }} />
+                    <div className="absolute bottom-0 left-0 right-0 p-5 flex items-end justify-between">
+                        <div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-orange-300">★ Chef's Pick</span>
+                            <div className="text-white font-black text-xl" style={{ fontFamily: "'Playfair Display',serif" }}>Truffle Pasta</div>
+                        </div>
+                        <span className="text-orange-300 font-black text-lg">₹549</span>
+                    </div>
                 </motion.div>
 
                 {/* Scroll cue */}
-                <motion.div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}>
-                    <span className="text-stone-400 text-[9px] font-bold uppercase tracking-[0.25em]">Discover</span>
-                    <motion.div className="w-px h-10 bg-gradient-to-b from-orange-400/60 to-transparent"
+                <motion.div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}>
+                    <span className="text-stone-400 text-[9px] font-bold uppercase tracking-[0.25em]">Scroll</span>
+                    <motion.div className="w-px h-8 bg-gradient-to-b from-orange-400/70 to-transparent"
                         animate={{ scaleY: [0, 1, 0], originY: 0 }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
                 </motion.div>
 
-                {/* Decorative arch bottom */}
-                <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
-                    style={{ background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.5) 70%, #ffffff 100%)" }} />
+                {/* Bottom fade */}
+                <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
+                    style={{ background: "linear-gradient(to bottom,transparent,rgba(255,255,255,0.6) 70%,#fff 100%)" }} />
             </section>
 
+            {/* ═══ MARQUEE TICKER ═══ */}
+            <Marquee />
+
             {/* ═══ STATS STRIP ═══ */}
-            <section className="relative py-16 overflow-hidden" style={{ background: "linear-gradient(135deg, #FF5A00 0%, #f97316 50%, #fb923c 100%)" }}>
-                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
-                <div className="relative max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                    {[
-                        { value: 50000, suffix: "+", label: "Happy Diners" },
-                        { value: 120, suffix: "+", label: "Menu Items" },
-                        { value: 12, suffix: "", label: "Locations" },
-                        { value: 4.9, suffix: "★", label: "Avg Rating" },
-                    ].map((s, i) => (
-                        <FadeIn key={i} delay={i * 0.12}>
-                            <motion.div
-                                whileHover={{ scale: 1.1, y: -4 }}
-                                transition={{ duration: 0.25 }}
-                            >
-                                <div className="text-4xl md:text-5xl font-black text-white mb-1 tracking-tighter" style={{ fontFamily: "'Playfair Display', serif" }}>
-                                    <AnimatedCounter target={s.value} suffix={s.suffix} />
-                                </div>
-                                <div className="text-orange-100 text-xs font-bold uppercase tracking-widest">{s.label}</div>
-                            </motion.div>
-                        </FadeIn>
-                    ))}
+            <section className="relative py-20 overflow-hidden" style={{ background: "linear-gradient(135deg, #fff8ed 0%, #fef3e2 50%, #fff6ef 100%)" }}>
+                {/* Top and bottom rule lines */}
+                <div className="absolute top-0 inset-x-0 h-px" style={{ background: "linear-gradient(to right, transparent, rgba(255,90,0,0.25) 30%, rgba(212,168,83,0.35) 50%, rgba(255,90,0,0.25) 70%, transparent)" }} />
+                <div className="absolute bottom-0 inset-x-0 h-px" style={{ background: "linear-gradient(to right, transparent, rgba(255,90,0,0.15) 30%, rgba(212,168,83,0.22) 50%, rgba(255,90,0,0.15) 70%, transparent)" }} />
+                <div className="relative max-w-5xl mx-auto px-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4">
+                        {[
+                            { value: 50000, suffix: "+", label: "Happy Diners", icon: <Heart size={16} /> },
+                            { value: 120, suffix: "+", label: "Menu Items", icon: <Utensils size={16} /> },
+                            { value: 12, suffix: "", label: "Locations", icon: <MapPin size={16} /> },
+                            { value: 4.9, suffix: "★", label: "Avg Rating", icon: <Star size={16} fill="currentColor" /> },
+                        ].map((s, i) => (
+                            <FadeIn key={i} delay={i * 0.1}>
+                                <motion.div
+                                    whileHover={{ y: -5 }}
+                                    transition={{ duration: 0.25 }}
+                                    className="text-center py-6 px-4 relative"
+                                >
+                                    {i < 3 && <div className="absolute right-0 top-1/4 bottom-1/4 w-px" style={{ background: "linear-gradient(to bottom, transparent, rgba(212,168,83,0.3), transparent)" }} />}
+                                    <div className="inline-flex items-center justify-center w-9 h-9 rounded-full mb-3" style={{ background: "rgba(255,90,0,0.08)", color: "#FF5A00" }}>
+                                        {s.icon}
+                                    </div>
+                                    <div className="text-4xl md:text-5xl font-black tracking-tighter mb-1" style={{ fontFamily: "'Playfair Display', serif", background: "linear-gradient(135deg, #FF5A00, #D4A853)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                                        <AnimatedCounter target={s.value} suffix={s.suffix} />
+                                    </div>
+                                    <div className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">{s.label}</div>
+                                </motion.div>
+                            </FadeIn>
+                        ))}
+                    </div>
                 </div>
             </section>
 
             {/* ═══ FEATURES BENTO ═══ */}
             <section className="py-28 px-6 bg-white">
                 <FadeIn className="text-center mb-16 max-w-4xl mx-auto">
-                    <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-orange-50 border border-orange-100 text-xs font-bold uppercase tracking-widest text-orange-600 mb-6">
-                        <Sparkles size={12} /> Why Velvet Plate
-                    </span>
+                    <div className="flex items-center justify-center gap-4 mb-6">
+                        <div className="h-px w-12 bg-gradient-to-r from-transparent to-orange-300" />
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.22em] text-orange-500">
+                            <Sparkles size={11} /> Why Velvet Plate
+                        </span>
+                        <div className="h-px w-12 bg-gradient-to-l from-transparent to-orange-300" />
+                    </div>
                     <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
                         className="text-4xl md:text-6xl text-stone-900 tracking-tight leading-tight">
                         The difference is in{" "}
@@ -562,7 +795,11 @@ export default function Landing() {
             {/* ═══ MENU CATEGORIES ═══ */}
             <section className="py-24 px-6" style={{ background: "#faf9f7" }}>
                 <FadeIn className="text-center mb-16 max-w-4xl mx-auto">
-                    <span className="inline-block px-5 py-2 rounded-full bg-white border border-stone-200 text-xs font-bold uppercase tracking-widest text-stone-500 mb-6 shadow-sm">Our Menu</span>
+                    <div className="flex items-center justify-center gap-4 mb-6">
+                        <div className="h-px w-12 bg-gradient-to-r from-transparent to-stone-300" />
+                        <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-stone-400">Our Menu</span>
+                        <div className="h-px w-12 bg-gradient-to-l from-transparent to-stone-300" />
+                    </div>
                     <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
                         className="text-4xl md:text-6xl text-stone-900 tracking-tight leading-tight">
                         Every craving,{" "}
@@ -605,7 +842,11 @@ export default function Landing() {
 
                     {/* Left — content */}
                     <FadeIn direction="left">
-                        <span className="inline-block px-5 py-2 rounded-full bg-orange-50 border border-orange-100 text-xs font-bold uppercase tracking-widest text-orange-600 mb-6">The Experience</span>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="h-px w-10 bg-gradient-to-r from-transparent to-orange-300" />
+                            <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-orange-500">The Experience</span>
+                            <div className="h-px w-10 bg-gradient-to-l from-transparent to-orange-300" />
+                        </div>
                         <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
                             className="text-4xl md:text-5xl text-stone-900 tracking-tight leading-tight mb-6">
                             Dine-In or Takeaway —<br />
@@ -701,7 +942,11 @@ export default function Landing() {
             {/* ═══ TESTIMONIALS ═══ */}
             <section className="py-24 px-6" style={{ background: "#faf9f7" }}>
                 <FadeIn className="text-center mb-16 max-w-4xl mx-auto">
-                    <span className="inline-block px-5 py-2 rounded-full bg-white border border-stone-200 text-xs font-bold uppercase tracking-widest text-stone-500 mb-6 shadow-sm">What Diners Say</span>
+                    <div className="flex items-center justify-center gap-4 mb-6">
+                        <div className="h-px w-12 bg-gradient-to-r from-transparent to-stone-300" />
+                        <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-stone-400">What Diners Say</span>
+                        <div className="h-px w-12 bg-gradient-to-l from-transparent to-stone-300" />
+                    </div>
                     <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
                         className="text-4xl md:text-6xl text-stone-900 tracking-tight">
                         Loved by{" "}
@@ -711,47 +956,52 @@ export default function Landing() {
                     </h2>
                 </FadeIn>
 
-                <div className="max-w-2xl mx-auto">
-                    <AnimatePresence mode="wait">
-                        <motion.div key={activeTestimonial}
-                            initial={{ opacity: 0, y: 28, scale: 0.95, filter: "blur(4px)" }}
-                            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                            exit={{ opacity: 0, y: -20, scale: 0.95, filter: "blur(4px)" }}
-                            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-                            whileHover={{ y: -4, boxShadow: "0 28px 60px rgba(0,0,0,0.10)" }}
-                            className="p-10 md:p-14 rounded-3xl bg-white border border-stone-100 text-center shadow-xl shadow-stone-100/80 cursor-default transition-shadow"
-                        >
-                            {/* Decorative quote mark */}
-                            <div className="text-8xl leading-none mb-2 -mt-4"
-                                style={{ fontFamily: "'Playfair Display', serif", color: "#FF5A00", opacity: 0.15, lineHeight: 1 }}>
-                                "
-                            </div>
-                            <div className="flex items-center justify-center gap-1 mb-5">
-                                {Array.from({ length: TESTIMONIALS[activeTestimonial].rating }).map((_, i) => (
-                                    <Star key={i} size={15} className="text-amber-400 fill-amber-400" />
-                                ))}
-                            </div>
-                            <p className="text-stone-700 text-lg md:text-xl leading-relaxed font-light mb-8 italic" style={{ fontFamily: "'Playfair Display', serif" }}>
-                                "{TESTIMONIALS[activeTestimonial].text}"
-                            </p>
-                            <div className="flex items-center justify-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-sm bg-gradient-to-br ${TESTIMONIALS[activeTestimonial].color}`}>
-                                    {TESTIMONIALS[activeTestimonial].avatar}
+                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {TESTIMONIALS.map((t, i) => (
+                        <FadeIn key={i} delay={i * 0.12}>
+                            <motion.div
+                                whileHover={{ y: -8, boxShadow: i === 1 ? "0 32px 72px rgba(255,90,0,0.18)" : "0 28px 60px rgba(0,0,0,0.10)" }}
+                                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                className="relative h-full rounded-3xl p-8 flex flex-col cursor-default"
+                                style={{
+                                    background: i === 1 ? "linear-gradient(145deg, #fff8f3, #ffffff)" : "#ffffff",
+                                    border: i === 1 ? "1.5px solid rgba(255,90,0,0.22)" : "1.5px solid rgba(0,0,0,0.06)",
+                                    boxShadow: i === 1 ? "0 16px 48px rgba(255,90,0,0.10), 0 2px 12px rgba(0,0,0,0.05)" : "0 8px 32px rgba(0,0,0,0.06)",
+                                }}
+                            >
+                                {i === 1 && (
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-white whitespace-nowrap"
+                                        style={{ background: "linear-gradient(135deg, #FF5A00, #f97316)" }}>
+                                        ★ Most Loved
+                                    </div>
+                                )}
+                                <div className="text-[72px] leading-none mb-1 -ml-1 select-none"
+                                    style={{ fontFamily: "'Playfair Display', serif", color: i === 1 ? "#FF5A00" : "#D4A853", opacity: 0.18, lineHeight: 0.8 }}>
+                                    "
                                 </div>
-                                <div className="text-left">
-                                    <div className="text-stone-900 font-bold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>{TESTIMONIALS[activeTestimonial].name}</div>
-                                    <div className="text-stone-400 text-xs">{TESTIMONIALS[activeTestimonial].role}</div>
+                                <div className="flex items-center gap-1 mb-4">
+                                    {Array.from({ length: t.rating }).map((_, si) => (
+                                        <Star key={si} size={13} className="text-amber-400 fill-amber-400" />
+                                    ))}
                                 </div>
-                            </div>
-                        </motion.div>
-                    </AnimatePresence>
-
-                    <div className="flex items-center justify-center gap-2.5 mt-7">
-                        {TESTIMONIALS.map((_, i) => (
-                            <button key={i} onClick={() => setActiveTestimonial(i)}
-                                className={`transition-all duration-300 rounded-full ${i === activeTestimonial ? "w-8 h-2.5 bg-orange-500" : "w-2.5 h-2.5 bg-stone-300 hover:bg-stone-400"}`} />
-                        ))}
-                    </div>
+                                <p className="text-stone-600 text-base leading-relaxed font-light italic flex-1 mb-6"
+                                    style={{ fontFamily: "'Playfair Display', serif" }}>
+                                    "{t.text}"
+                                </p>
+                                <div className="h-px mb-5" style={{ background: i === 1 ? "linear-gradient(to right, rgba(255,90,0,0.15), transparent)" : "rgba(0,0,0,0.05)" }} />
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-black text-xs bg-gradient-to-br ${t.color} flex-shrink-0`}
+                                        style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+                                        {t.avatar}
+                                    </div>
+                                    <div>
+                                        <div className="text-stone-900 font-bold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>{t.name}</div>
+                                        <div className="text-stone-400 text-[11px] font-medium mt-0.5">{t.role}</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </FadeIn>
+                    ))}
                 </div>
             </section>
 
@@ -843,8 +1093,14 @@ export default function Landing() {
             <style>{`
                 @keyframes goldShimmer {
                     0% { background-position: 0% center; }
-                    100% { background-position: 200% center; }
+                    100% { background-position: 220% center; }
                 }
+                @keyframes marqueeScroll {
+                    0%   { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+                ::selection { background: rgba(255,90,0,0.18); color: #7c3200; }
             `}</style>
         </div>
     );

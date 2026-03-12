@@ -58,11 +58,16 @@ export default function Navbar() {
       <nav className="fixed top-0 left-0 right-0 z-[1000] bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-600/20 group-hover:scale-110 transition-transform">
-              <span className="font-black text-xl">V</span>
-            </div>
-            <span className="font-black text-xl tracking-tighter text-slate-900 hidden sm:block">VELVET PLATE</span>
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <img
+              src="/Velvet_Plate_v2.png"
+              alt="Velvet Plate"
+              className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300"
+              style={{ filter: "drop-shadow(0 2px 8px rgba(255,90,0,0.28))" }}
+            />
+            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "1.2rem", color: "#1a1a1a", letterSpacing: "-0.01em" }} className="hidden sm:block">
+              Velvet Plate
+            </span>
           </Link>
 
           {/* Desktop Nav */}

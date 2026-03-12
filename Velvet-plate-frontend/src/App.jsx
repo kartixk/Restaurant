@@ -53,7 +53,14 @@ function App() {
       />
 
       <Navbar />
-      <Suspense fallback={<div className="flex items-center justify-center h-screen text-lg font-black text-slate-400 bg-slate-50">Loading Velvet Plate...</div>}>
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center h-screen bg-slate-50 gap-4">
+          <img src="/Velvet_Plate_v2.png" alt="Loading" className="w-16 h-16 object-contain animate-pulse" />
+          <div className="text-stone-400 text-sm font-bold tracking-[0.2em] uppercase" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Velvet Plate
+          </div>
+        </div>
+      }>
         <Routes>
           <Route path="/" element={<HomeGuard />} />
 
