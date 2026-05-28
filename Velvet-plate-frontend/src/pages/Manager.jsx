@@ -254,7 +254,7 @@ function ManagerDashboard({ branch, logout }) {
                     <tbody>
                         {recentOrders.length === 0 ? <tr><td colSpan="5" style={{ ...S.td, textAlign: "center", color: "#64748b" }}>No recent orders.</td></tr> : recentOrders.map((o, i) => (
                             <tr key={i}>
-                                <td style={{ ...S.td, fontWeight: 500 }}>#{o.id.substring(o.id.length - 6).toUpperCase()}</td>
+                                <td style={{ ...S.td, fontWeight: 500 }}>#{(o.id || '').slice(-6).toUpperCase() || 'N/A'}</td>
                                 <td style={S.td}>{new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                                 <td style={{ ...S.td, fontWeight: 600 }}>{formatCurrency(o.orderTotal)}</td>
                                 <td style={S.td}><span style={S.badge("#fef3c7", "#d97706")}>{o.status || 'PREPARING'}</span></td>
@@ -273,7 +273,7 @@ function ManagerDashboard({ branch, logout }) {
                 <div style={S.cardHeader}>
                     <h3 style={S.cardTitle}>Store Visibility Configuration</h3>
                     <span style={S.badge(branch.storeStatus === 'verified' ? "#ecfdf5" : "#fffbeb", branch.storeStatus === 'verified' ? "#059669" : "#b45309")}>
-                        {branch.storeStatus.toUpperCase()}
+                        {(branch.storeStatus || 'unknown').toUpperCase()}
                     </span>
                 </div>
                 <div style={{ ...S.cardBody, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -351,10 +351,10 @@ function ManagerDashboard({ branch, logout }) {
                         {b === "COMPLETED" && recentOrders.length > 0 && recentOrders.map((o, i) => (
                             <div key={i} style={{ ...S.card, padding: "1rem", borderLeft: "3px solid #10b981", boxShadow: "0 1px 2px 0 rgba(0,0,0,0.05)" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                                    <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>#{o.id.substring(o.id.length - 6).toUpperCase()}</span>
+                                    <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>#{(o.id || '').slice(-6).toUpperCase() || 'N/A'}</span>
                                     <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
-                                <div style={{ fontSize: "0.85rem", color: "#475569", marginBottom: "0.5rem" }}>{o.items.length} Items • {formatCurrency(o.orderTotal)}</div>
+                                <div style={{ fontSize: "0.85rem", color: "#475569", marginBottom: "0.5rem" }}>{(o.items?.length ?? 0)} Items • {formatCurrency(o.orderTotal)}</div>
                                 <div style={{ display: "flex", gap: "0.5rem" }}>
                                     <button style={{ ...S.btnOutline, width: "100%", padding: "0.25rem", fontSize: "0.75rem", background: "#f8fafc" }}>View Details</button>
                                 </div>

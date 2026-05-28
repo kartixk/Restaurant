@@ -12,7 +12,7 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/Velvet-plate-backend/src/$1" },
+    { "src": "/api/(.*)", "dest": "/Velvet-plate-backend/api/index.js" },
     { "src": "/(.*)", "dest": "/Velvet-plate-frontend/dist/$1" }
   ],
   "env": {

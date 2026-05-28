@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 const cardVariants = {
     initial: { opacity: 0, y: 30, scale: 0.95 },

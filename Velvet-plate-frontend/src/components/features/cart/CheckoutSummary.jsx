@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { cartStyles as styles } from "./CartStyles";
 import { useConfirmOrder } from "../../../hooks/useCart";
 import useCartStore from "../../../store/useCartStore";

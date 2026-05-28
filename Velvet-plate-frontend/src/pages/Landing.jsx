@@ -1,7 +1,7 @@
 // src/pages/Landing.jsx
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform, AnimatePresence, useInView } from "framer-motion";
+import {  useScroll, useTransform, AnimatePresence, useInView } from "motion/react";
 import {
     ChevronRight, Star, Clock, MapPin, Utensils, Flame, Sparkles,
     ArrowRight, Shield, Zap, Heart, Menu, X
@@ -20,6 +20,7 @@ function Particle({ style }) {
             className="absolute rounded-full pointer-events-none"
             style={style}
             animate={{ y: [0, -30, 0], x: [0, 10, 0], opacity: [0.1, 0.35, 0.1] }}
+            // eslint-disable-next-line react-hooks/purity
             transition={{ duration: Math.random() * 4 + 5, repeat: Infinity, ease: "easeInOut", delay: Math.random() * 3 }}
         />
     );
@@ -146,8 +147,8 @@ export default function Landing() {
     const { scrollY } = useScroll();
     const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
     const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "20%"]);
-    const heroOpacity = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
-    const [activeTestimonial, setActiveTestimonial] = useState(0);
+    
+    const [, setActiveTestimonial] = useState(0);
     const [activeWord, setActiveWord] = useState(0);
     const [navScrolled, setNavScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

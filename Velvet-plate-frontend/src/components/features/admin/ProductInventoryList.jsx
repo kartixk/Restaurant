@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+﻿import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Trash2, Search } from 'lucide-react';
 
 const cardVariants = {
@@ -79,7 +79,7 @@ export default function ProductInventoryList({
             variants={cardVariants}
         >
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                <h3 className="text-sm font-medium text-slate-500">📦 Menu Inventory</h3>
+                <h3 className="text-sm font-medium text-slate-500">ðŸ“¦ Menu Inventory</h3>
                 <div className="relative flex items-center flex-1 min-w-[200px]">
                     <input
                         type="text"
@@ -171,7 +171,7 @@ export default function ProductInventoryList({
                                                 <span className="text-[0.7rem] bg-slate-100 px-2 py-1 rounded-md text-slate-500 font-semibold uppercase tracking-wider">{s.category}</span>
                                                 {s.branchName && (
                                                     <span className="text-[0.7rem] bg-amber-50 px-2 py-1 rounded-md text-amber-800 font-semibold uppercase tracking-wider">
-                                                        📍 {s.branchName}
+                                                        ðŸ“ {s.branchName}
                                                     </span>
                                                 )}
                                             </div>

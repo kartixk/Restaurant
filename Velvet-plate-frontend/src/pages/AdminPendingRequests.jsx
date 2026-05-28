@@ -4,7 +4,7 @@ import { useBranches } from "../hooks/useBranches";
 import api from "../api/axios";
 import { toast } from "react-toastify";
 import { ExternalLink, X, Clock, Store, FileText, CheckCircle, XCircle, ChevronLeft, Mail, Phone, MapPin } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import {  AnimatePresence } from "motion/react";
 
 function InfoRow({ label, value, full = false }) {
     return (

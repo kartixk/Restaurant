@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+﻿import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { MapPin, ChevronRight, Search, Navigation, X } from 'lucide-react';
 import api from '../api/axios';
 import useLocationStore from '../store/useLocationStore';

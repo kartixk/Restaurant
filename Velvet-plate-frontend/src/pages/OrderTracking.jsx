@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import api from "../api/axios";
 import { CheckCircle2, ChefHat, PackageCheck, Receipt } from "lucide-react";
 import { toast } from "react-toastify";

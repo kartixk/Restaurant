@@ -1,6 +1,6 @@
 // src/components/features/cart/CartItem.jsx
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { useRemoveFromCart } from '../../../hooks/useCart';
 import { cartStyles as styles } from './CartStyles';
 import { toast } from 'react-toastify';

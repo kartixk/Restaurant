@@ -1,12 +1,12 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import api from "../api/axios";
-import { useProducts, useAddProduct, useDeleteProduct, useUpdateProductStock, useUpdateProductAvailability } from "../hooks/useProducts";
+import { useProducts, useAddProduct, useDeleteProduct, useUpdateProductAvailability } from "../hooks/useProducts";
 import { useBranches } from "../hooks/useBranches";
 import useAuthStore from "../store/useAuthStore";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { motion } from "framer-motion";
+
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -99,10 +99,6 @@ export default function Admin() {
   const role = upperRole ? upperRole.toUpperCase() : null;
   const navigate = useNavigate();
 
-  if (role === "MANAGER") {
-    return <Navigate to="/manager" replace />;
-  }
-
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -113,8 +109,8 @@ export default function Admin() {
   const [activeBranchTab, setActiveBranchTab] = useState("overview");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("adminDarkMode") === "true");
+  const [, setIsNotificationsOpen] = useState(false);
+  const [isDarkMode] = useState(() => localStorage.getItem("adminDarkMode") === "true");
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
@@ -141,25 +137,25 @@ export default function Admin() {
   }, []);
 
   // Global Data
-  const { data: dbBranches = [], refetch: refetchBranches } = useBranches();
+  const { data: dbBranches = [] } = useBranches();
   const pendingStores = useMemo(() => dbBranches.filter(b => b.storeStatus === "under_review"), [dbBranches]);
-  const { data: products = [], error: productsError } = useProducts(selectedBranchId);
+  const { data: products = [] } = useProducts(selectedBranchId);
 
   // Forms & State
   const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "", dietType: "", imageUrl: "", branchId: "" });
-  const [stockInputs, setStockInputs] = useState({});
+  
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryCategory, setInventoryCategory] = useState("All");
 
   // Reports State
   const [reportSummary, setReportSummary] = useState({ totalAmount: 0, count: 0, totalCommission: 0 });
   const [salesList, setSalesList] = useState([]);
-  const [reportLoading, setReportLoading] = useState(false);
+  const [, setReportLoading] = useState(false);
 
   // Mutations
   const addProductMutation = useAddProduct();
   const deleteProductMutation = useDeleteProduct();
-  const updateStockMutation = useUpdateProductStock();
+  
   const updateAvailabilityMutation = useUpdateProductAvailability();
 
   const categories = ["Starters", "Soups", "Main Course", "Breads/Rotis", "Desserts", "Mocktails"];
@@ -173,27 +169,11 @@ export default function Admin() {
     } else {
       fetchReport("month"); // default to month for dashboard charts
     }
-  }, [isAuthenticated, role, navigate, selectedBranchId, activeSidebarItem]);
+  }, [isAuthenticated, role, navigate, selectedBranchId, activeSidebarItem, fetchReport]);
 
-  const handleApproveStore = async (branchId) => {
-    try {
-      await api.put(`/branches/${branchId}/verify`, { status: "verified" });
-      toast.success("Store Approved! Verification email sent to manager.");
-      if (refetchBranches) refetchBranches();
-    } catch (err) {
-      handleApiError(err, "Failed to approve store");
-    }
-  };
+  
 
-  const handleRejectStore = async (branchId) => {
-    try {
-      await api.put(`/branches/${branchId}/verify`, { status: "rejected" });
-      toast.success("Store rejected. Notification email sent to manager.");
-      if (refetchBranches) refetchBranches();
-    } catch (err) {
-      handleApiError(err, "Failed to reject store");
-    }
-  };
+  
 
   const handleApiError = (err, msg) => {
     if (err?.response?.status === 401 || err?.response?.status === 403) {
@@ -201,6 +181,7 @@ export default function Admin() {
     } else toast.error(msg || "An error occurred");
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchReport = async (type) => {
     setReportLoading(true);
     try {
@@ -987,6 +968,10 @@ export default function Admin() {
 
 
   // ─── MAIN LAYOUT ───────────────────────────────────────────────────────────
+  if (role === "MANAGER") {
+    return <Navigate to="/manager" replace />;
+  }
+
   return (
     <div className="flex flex-row h-screen w-screen bg-slate-50 font-inter text-slate-900 overflow-hidden box-border">
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />

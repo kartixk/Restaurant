@@ -39,6 +39,8 @@ const getSalesReports = async (type) => {
             status: { not: "CANCELLED" }
         },
         select: {
+            id: true,
+            status: true,
             orderTotal: true,
             createdAt: true,
             orderType: true,
@@ -94,6 +96,8 @@ const getBranchSalesReports = async (branchId, type) => {
             status: { not: "CANCELLED" }
         },
         select: {
+            id: true,
+            status: true,
             orderTotal: true,
             createdAt: true,
             orderType: true,

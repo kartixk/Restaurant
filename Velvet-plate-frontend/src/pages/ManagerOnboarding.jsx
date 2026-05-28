@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building, MapPin, RefreshCw, FileText, CheckCircle, FileUp, Image as ImageIcon, ShieldCheck, Landmark, Globe, Smartphone, User, History } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import api from "../api/axios";
 
 export default function ManagerOnboarding({ onComplete }) {
