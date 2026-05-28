@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from "./components/Navbar";
@@ -36,23 +36,15 @@ function HomeGuard() {
   return <Products />;
 }
 
-function App() {
-  return (
-    <BrowserRouter>
-      <ToastContainer
-        position="top-center"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={true}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
+// Inner component — has access to useLocation inside BrowserRouter
+function RouterContent() {
+  const location = useLocation();
+  // Hide the public Navbar on manager and admin pages (they have their own layout)
+  const hideNavbar = location.pathname.startsWith("/manager") || location.pathname.startsWith("/admin");
 
-      <Navbar />
+  return (
+    <>
+      {!hideNavbar && <Navbar />}
       <Suspense fallback={
         <div className="flex flex-col items-center justify-center h-screen bg-slate-50 gap-4">
           <img src="/Velvet_Plate_v2.png" alt="Loading" className="w-16 h-16 object-contain animate-pulse" />
@@ -122,7 +114,6 @@ function App() {
               <ManagerStatus />
             </ProtectedRoute>
           } />
-          {/* /manager shortcut → handled by ProtectedRoute inside, redirects appropriately */}
           <Route path="/manager" element={
             <ProtectedRoute allowedRoles={["MANAGER"]}>
               <Navigate to="/manager/dashboard" replace />
@@ -137,6 +128,26 @@ function App() {
           <Route path="/order/:orderId" element={<OrderTracking />} />
         </Routes>
       </Suspense>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+      <RouterContent />
     </BrowserRouter>
   );
 }

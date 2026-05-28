@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "Velvet-plate-frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
+    {
+      "src": "Velvet-plate-backend/src/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/Velvet-plate-backend/src/$1" },
+    { "src": "/(.*)", "dest": "/Velvet-plate-frontend/dist/$1" }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

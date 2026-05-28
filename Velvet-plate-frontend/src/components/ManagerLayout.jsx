@@ -4,9 +4,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
 import api from "../api/axios";
 import { toast } from "react-toastify";
-import { AnimatePresence } from "framer-motion";
 
-// ─── ICONS (matches Admin exactly) ─────────────────────────────────────────
+// ─── ICONS ──────────────────────────────────────────────────────────────────
 const Icons = {
     Dashboard: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>,
     Store: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
@@ -20,7 +19,7 @@ const Icons = {
     Clock: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Alert: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.834-1.964-.834-2.734 0L3.07 16.5C2.3 17.333 3.262 19 4.8 19z" /></svg>,
     X: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>,
-    Shield: () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+    ChevronLeft: () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>,
 };
 
 const NAV_ITEMS = [
@@ -68,11 +67,16 @@ export default function ManagerLayout({ children }) {
     const handleLogout = () => { logout(); navigate("/login"); };
 
     if (loading) return (
-        <div className="flex items-center justify-center h-screen w-screen bg-slate-50">
-            <div className="flex flex-col items-center gap-4">
-            <img src="/Velvet_Plate_v2.png" alt="Logo" className="w-12 h-12 object-contain animate-pulse drop-shadow-xl" />
-            <span className="text-sm text-slate-400 font-medium tracking-wide uppercase" style={{ fontFamily: "'Playfair Display', serif" }}>Velvet Plate</span>
-        </div>
+        <div className="flex items-center justify-center h-screen w-screen bg-slate-900">
+            <div className="flex flex-col items-center gap-5">
+                <div className="relative">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center shadow-2xl shadow-orange-500/30">
+                        <img src="/Velvet_Plate_v2.png" alt="Logo" className="w-10 h-10 object-contain" />
+                    </div>
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 animate-ping opacity-20" />
+                </div>
+                <span className="text-xs text-slate-500 font-semibold uppercase tracking-[0.25em]" style={{ fontFamily: "'Playfair Display', serif" }}>Loading Partner Center</span>
+            </div>
         </div>
     );
 
@@ -82,27 +86,52 @@ export default function ManagerLayout({ children }) {
     const isPending = storeStatus === "pending";
     const isRejected = storeStatus === "rejected";
     const noBranch = branchError === "no_branch";
+    const isLive = isVerified && branch?.isVisible;
 
     return (
-        <div className="flex flex-row h-screen w-screen bg-slate-50 font-inter text-slate-900 overflow-hidden box-border">
+        <div className="flex flex-row h-screen w-screen overflow-hidden box-border" style={{ fontFamily: "'Inter', sans-serif", backgroundColor: "#f1f5f9" }}>
 
             {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
-            <div className={`bg-white border-r border-slate-200 flex flex-col flex-shrink-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isSidebarCollapsed ? "w-[80px]" : "w-[240px]"}`}>
-                <div className="flex-1 flex flex-col">
-
-                    {/* Logo */}
-                    <div className={`h-[72px] flex items-center border-b border-slate-200 flex-shrink-0 ${isSidebarCollapsed ? "justify-center px-0" : "justify-start px-5"}`}>
-                        <img src="/Velvet_Plate_v2.png" alt="Logo" className="w-9 h-9 object-contain drop-shadow-sm" />
-                        {!isSidebarCollapsed && (
-                            <span className="text-slate-900 font-extrabold tracking-tight text-xl whitespace-nowrap ml-3"
-                                  style={{ fontFamily: "'Playfair Display', serif" }}>
-                                Velvet Plate
-                            </span>
-                        )}
+            <aside
+                className="flex flex-col flex-shrink-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden"
+                style={{
+                    width: isSidebarCollapsed ? "80px" : "248px",
+                    background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)",
+                    borderRight: "1px solid rgba(255,255,255,0.06)",
+                }}
+            >
+                {/* Logo area */}
+                <div
+                    className="flex items-center flex-shrink-0 overflow-hidden"
+                    style={{
+                        height: "72px",
+                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                        padding: isSidebarCollapsed ? "0 20px" : "0 20px",
+                        justifyContent: isSidebarCollapsed ? "center" : "flex-start",
+                        gap: "12px",
+                    }}
+                >
+                    <div
+                        className="flex items-center justify-center flex-shrink-0 rounded-xl"
+                        style={{
+                            width: "36px", height: "36px",
+                            background: "linear-gradient(135deg, #f97316, #ef4444)",
+                            boxShadow: "0 4px 12px rgba(249,115,22,0.4)",
+                        }}
+                    >
+                        <img src="/Velvet_Plate_v2.png" alt="Logo" className="w-6 h-6 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
                     </div>
+                    {!isSidebarCollapsed && (
+                        <div>
+                            <div className="text-white font-extrabold tracking-tight text-lg leading-none" style={{ fontFamily: "'Playfair Display', serif" }}>Velvet Plate</div>
+                            <div className="text-orange-400 font-bold text-[10px] uppercase tracking-[0.15em] leading-none mt-1">Partner Center</div>
+                        </div>
+                    )}
+                </div>
 
-                    {/* Nav */}
-                    <nav className="py-6 px-4 flex flex-col gap-2">
+                {/* Nav */}
+                <nav className="flex-1 overflow-y-auto py-5" style={{ padding: isSidebarCollapsed ? "20px 10px" : "20px 12px" }}>
+                    <div className="flex flex-col gap-1">
                         {NAV_ITEMS.map(({ id, path, Icon }) => {
                             const active = location.pathname === path;
                             return (
@@ -110,71 +139,200 @@ export default function ManagerLayout({ children }) {
                                     key={path}
                                     to={path}
                                     title={id}
-                                    className={`flex items-center gap-3 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200 overflow-hidden box-border ${isSidebarCollapsed ? "justify-center p-3" : "justify-start py-2.5 px-4"} ${active ? "bg-[#FFF7F5] text-[#FF5A00] border-l-4 border-[#FF5A00]" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: isSidebarCollapsed ? 0 : "10px",
+                                        justifyContent: isSidebarCollapsed ? "center" : "flex-start",
+                                        padding: isSidebarCollapsed ? "10px" : "10px 14px",
+                                        borderRadius: "10px",
+                                        textDecoration: "none",
+                                        fontWeight: 600,
+                                        fontSize: "0.875rem",
+                                        transition: "all 0.2s ease",
+                                        position: "relative",
+                                        overflow: "hidden",
+                                        ...(active ? {
+                                            background: "linear-gradient(90deg, rgba(249,115,22,0.18) 0%, rgba(249,115,22,0.06) 100%)",
+                                            color: "#fb923c",
+                                            borderLeft: "3px solid #f97316",
+                                        } : {
+                                            background: "transparent",
+                                            color: "rgba(148,163,184,0.9)",
+                                            borderLeft: "3px solid transparent",
+                                        }),
+                                    }}
+                                    onMouseEnter={e => { if (!active) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#e2e8f0"; } }}
+                                    onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(148,163,184,0.9)"; } }}
                                 >
-                                    <div className={`flex items-center justify-center w-6 h-6 flex-shrink-0 ${active ? "text-[#FF5A00]" : "text-slate-400"}`}>
+                                    <div style={{ width: "18px", height: "18px", flexShrink: 0 }}>
                                         <Icon />
                                     </div>
-                                    {!isSidebarCollapsed && <span className="whitespace-nowrap">{id}</span>}
+                                    {!isSidebarCollapsed && <span style={{ whiteSpace: "nowrap" }}>{id}</span>}
                                 </Link>
                             );
                         })}
-                    </nav>
-
-                    {/* Collapse Button */}
-                    <div className={`mt-auto ${isSidebarCollapsed ? "p-4 px-2" : "p-4"}`}>
-                        <button
-                            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                            className="flex items-center justify-center gap-2 w-full p-2.5 rounded-lg border-none bg-[#FFF7F5] text-slate-500 text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-orange-50"
-                        >
-                            <svg className={`transition-transform duration-300 ${isSidebarCollapsed ? "rotate-180" : ""}`} width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                            </svg>
-                            {!isSidebarCollapsed && <span>Collapse</span>}
-                        </button>
                     </div>
+                </nav>
+
+                {/* Bottom: branch info + collapse */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: isSidebarCollapsed ? "12px 10px" : "12px" }}>
+                    {/* Branch status badge */}
+                    {!isSidebarCollapsed && branch && (
+                        <div className="mb-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                            <div className="flex items-center gap-2">
+                                <div
+                                    className="flex-shrink-0 rounded-full"
+                                    style={{
+                                        width: "8px", height: "8px",
+                                        backgroundColor: isLive ? "#22c55e" : "#94a3b8",
+                                        boxShadow: isLive ? "0 0 0 3px rgba(34,197,94,0.2)" : "none",
+                                    }}
+                                />
+                                <div className="min-w-0">
+                                    <div className="text-white font-semibold text-xs truncate">{branch.name || "My Store"}</div>
+                                    <div className="text-slate-500 text-[10px] font-medium mt-0.5">{isLive ? "Accepting Orders" : isVerified ? "Offline" : isUnderReview ? "Under Review" : "Pending"}</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        className="flex items-center gap-2 w-full rounded-xl transition-all duration-200"
+                        style={{
+                            padding: isSidebarCollapsed ? "10px" : "8px 12px",
+                            justifyContent: isSidebarCollapsed ? "center" : "flex-start",
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.06)",
+                            color: "rgba(148,163,184,0.7)",
+                            cursor: "pointer",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                        }}
+                    >
+                        <span style={{ transform: isSidebarCollapsed ? "rotate(180deg)" : "none", transition: "transform 0.3s" }}>
+                            <Icons.ChevronLeft />
+                        </span>
+                        {!isSidebarCollapsed && <span>Collapse</span>}
+                    </button>
                 </div>
-            </div>
+            </aside>
 
             {/* ── RIGHT SIDE ───────────────────────────────────────────────── */}
             <div className="flex flex-col flex-1 overflow-hidden">
 
                 {/* Topbar */}
-                <header className="h-[72px] bg-white/90 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0 z-50 sticky top-0">
-                    <div />
-
-                    {/* Centered title */}
-                    <div className="absolute left-1/2 -translate-x-1/2 font-semibold text-slate-900 text-lg">
-                        Partner Center
+                <header
+                    className="flex items-center justify-between flex-shrink-0 sticky top-0 z-50"
+                    style={{
+                        height: "72px",
+                        padding: "0 32px",
+                        background: "rgba(255,255,255,0.8)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        borderBottom: "1px solid rgba(226,232,240,0.8)",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                    }}
+                >
+                    {/* Left: breadcrumb or page area */}
+                    <div className="flex items-center gap-3">
+                        {branch && (
+                            <div
+                                className="flex items-center gap-2 text-sm font-semibold"
+                                style={{ color: "#0f172a" }}
+                            >
+                                <span style={{ color: "#94a3b8", fontWeight: 500 }}>Partner Center</span>
+                                <span style={{ color: "#cbd5e1" }}>/</span>
+                                <span>{NAV_ITEMS.find(n => n.path === location.pathname)?.id || "Dashboard"}</span>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Right actions */}
+                    {/* Right: status + avatar */}
                     <div className="flex items-center gap-3" ref={profileRef}>
                         {branch && (
-                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${isVerified ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-amber-50 border-amber-100 text-amber-600"}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${isVerified ? "bg-emerald-500" : "bg-amber-500"}`} />
+                            <div
+                                className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full"
+                                style={{
+                                    ...(isVerified
+                                        ? { background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a" }
+                                        : isUnderReview
+                                            ? { background: "#fffbeb", border: "1px solid #fde68a", color: "#b45309" }
+                                            : { background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b" }
+                                    ),
+                                }}
+                            >
+                                <span
+                                    className="rounded-full"
+                                    style={{
+                                        width: "6px", height: "6px",
+                                        backgroundColor: isVerified ? "#22c55e" : isUnderReview ? "#f59e0b" : "#94a3b8",
+                                    }}
+                                />
                                 {isVerified ? "Verified" : isUnderReview ? "Under Review" : isPending ? "Pending" : "Check Status"}
                             </div>
                         )}
                         <div className="relative">
                             <button
                                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                                className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-900 cursor-pointer flex items-center justify-center transition-all duration-200 hover:bg-slate-200"
+                                className="flex items-center justify-center rounded-xl transition-all duration-200"
+                                style={{
+                                    width: "40px", height: "40px",
+                                    background: isProfileOpen ? "linear-gradient(135deg, #f97316, #ef4444)" : "#f1f5f9",
+                                    border: isProfileOpen ? "none" : "1px solid #e2e8f0",
+                                    color: isProfileOpen ? "white" : "#475569",
+                                    cursor: "pointer",
+                                    boxShadow: isProfileOpen ? "0 4px 12px rgba(249,115,22,0.3)" : "none",
+                                }}
                             >
                                 <Icons.User />
                             </button>
                             {isProfileOpen && (
-                                <div className="absolute top-[120%] right-0 w-[220px] bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden z-[100]">
-                                    <div className="p-4 bg-slate-50 border-b border-slate-200">
-                                        <div className="font-semibold text-slate-900 text-sm">{user?.name || "User"}</div>
-                                        <div className="text-slate-500 text-xs mt-0.5">{user?.email || ""}</div>
-                                        <div className="inline-block mt-1.5 px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-md uppercase tracking-wider">{user?.role}</div>
+                                <div
+                                    className="absolute top-[calc(100%+8px)] right-0 overflow-hidden"
+                                    style={{
+                                        width: "240px",
+                                        background: "white",
+                                        borderRadius: "16px",
+                                        border: "1px solid #e2e8f0",
+                                        boxShadow: "0 20px 40px -10px rgba(0,0,0,0.15)",
+                                        zIndex: 100,
+                                    }}
+                                >
+                                    <div style={{ padding: "16px", background: "linear-gradient(135deg, #0f172a, #1e293b)", color: "white" }}>
+                                        <div className="flex items-center gap-3">
+                                            <div
+                                                className="flex items-center justify-center rounded-xl flex-shrink-0"
+                                                style={{
+                                                    width: "40px", height: "40px",
+                                                    background: "linear-gradient(135deg, #f97316, #ef4444)",
+                                                }}
+                                            >
+                                                <Icons.User />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="font-bold text-sm truncate">{user?.name || "User"}</div>
+                                                <div className="text-slate-400 text-xs truncate">{user?.email || ""}</div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <button
                                         onClick={handleLogout}
-                                        className="flex items-center gap-2 w-full p-3 px-4 border-none bg-white text-red-500 text-sm font-semibold cursor-pointer transition-colors hover:bg-red-50"
+                                        className="flex items-center gap-2 w-full transition-colors"
+                                        style={{
+                                            padding: "12px 16px",
+                                            background: "white",
+                                            border: "none",
+                                            color: "#ef4444",
+                                            fontSize: "0.875rem",
+                                            fontWeight: 600,
+                                            cursor: "pointer",
+                                            textAlign: "left",
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.background = "#fef2f2"}
+                                        onMouseLeave={e => e.currentTarget.style.background = "white"}
                                     >
-                                        <Icons.Logout /> <span>Logout</span>
+                                        <Icons.Logout /> <span>Sign Out</span>
                                     </button>
                                 </div>
                             )}
@@ -183,26 +341,28 @@ export default function ManagerLayout({ children }) {
                 </header>
 
                 {/* Main scrollable area */}
-                <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden text-slate-900 bg-slate-50">
+                <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden" style={{ background: "#f1f5f9" }}>
 
                     {/* Status banners */}
                     {(noBranch || isUnderReview || isPending || isRejected) && (
-                        <div className="max-w-[1400px] w-full mx-auto px-10 pt-10 box-border">
+                        <div style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "32px 40px 0", boxSizing: "border-box" }}>
                             {noBranch && (
-                                <div className="bg-white border border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center gap-4 shadow-sm mb-6">
-                                    <div className="w-14 h-14 rounded-2xl bg-[#FFF7F5] flex items-center justify-center text-[#FF5A00]"><Icons.FileText /></div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900 mb-1">Complete Your Onboarding</h3>
-                                        <p className="text-sm text-slate-500 font-medium max-w-md">Set up your restaurant profile to start accepting orders on Velvet Plate.</p>
+                                <div className="mb-6 flex items-center gap-5 rounded-2xl overflow-hidden" style={{ background: "white", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", padding: "24px 28px" }}>
+                                    <div className="flex items-center justify-center rounded-2xl flex-shrink-0" style={{ width: "52px", height: "52px", background: "linear-gradient(135deg, #fff7ed, #ffedd5)" }}>
+                                        <div style={{ color: "#f97316" }}><Icons.FileText /></div>
                                     </div>
-                                    <Link to="/manager/onboarding" className="px-6 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors">
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-slate-900 text-base mb-0.5">Complete Your Onboarding</h3>
+                                        <p className="text-slate-500 text-sm font-medium">Set up your restaurant profile to start accepting orders.</p>
+                                    </div>
+                                    <Link to="/manager/onboarding" className="px-5 py-2.5 rounded-xl text-sm font-bold text-white whitespace-nowrap" style={{ background: "linear-gradient(135deg, #f97316, #ef4444)", textDecoration: "none", boxShadow: "0 4px 12px rgba(249,115,22,0.3)" }}>
                                         Start Setup →
                                     </Link>
                                 </div>
                             )}
                             {isUnderReview && (
-                                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 flex items-center gap-4 shadow-sm mb-6">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0"><Icons.Clock /></div>
+                                <div className="mb-6 flex items-center gap-4 rounded-2xl" style={{ background: "#fffbeb", border: "1px solid #fde68a", padding: "18px 24px" }}>
+                                    <div className="flex items-center justify-center rounded-xl flex-shrink-0" style={{ width: "40px", height: "40px", background: "#fef3c7" }}><div style={{ color: "#d97706" }}><Icons.Clock /></div></div>
                                     <div>
                                         <h4 className="font-bold text-amber-900 text-sm">Application Under Review</h4>
                                         <p className="text-amber-700 text-xs font-medium mt-0.5">Our team is verifying your FSSAI license and bank details. This typically takes 12–24 hours.</p>
@@ -210,23 +370,23 @@ export default function ManagerLayout({ children }) {
                                 </div>
                             )}
                             {isPending && !noBranch && (
-                                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 flex items-center gap-4 shadow-sm mb-6">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0"><Icons.Alert /></div>
-                                    <div>
+                                <div className="mb-6 flex items-center gap-4 rounded-2xl" style={{ background: "#fffbeb", border: "1px solid #fde68a", padding: "18px 24px" }}>
+                                    <div className="flex items-center justify-center rounded-xl flex-shrink-0" style={{ width: "40px", height: "40px", background: "#fef3c7" }}><div style={{ color: "#d97706" }}><Icons.Alert /></div></div>
+                                    <div className="flex-1">
                                         <h4 className="font-bold text-amber-900 text-sm">Store Deactivated</h4>
                                         <p className="text-amber-700 text-xs font-medium mt-0.5">Your store has been temporarily suspended. Contact support for more information.</p>
                                     </div>
-                                    <Link to="/manager/status" className="ml-auto px-4 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-colors whitespace-nowrap">View Status</Link>
+                                    <Link to="/manager/status" className="px-4 py-2 rounded-lg text-xs font-bold text-white whitespace-nowrap" style={{ background: "#d97706", textDecoration: "none" }}>View Status</Link>
                                 </div>
                             )}
                             {isRejected && (
-                                <div className="bg-red-50 border border-red-100 rounded-2xl p-6 flex items-center gap-4 shadow-sm mb-6">
-                                    <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0"><Icons.X /></div>
-                                    <div>
+                                <div className="mb-6 flex items-center gap-4 rounded-2xl" style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "18px 24px" }}>
+                                    <div className="flex items-center justify-center rounded-xl flex-shrink-0" style={{ width: "40px", height: "40px", background: "#fee2e2" }}><div style={{ color: "#ef4444" }}><Icons.X /></div></div>
+                                    <div className="flex-1">
                                         <h4 className="font-bold text-red-900 text-sm">Application Rejected</h4>
                                         <p className="text-red-700 text-xs font-medium mt-0.5">Discrepancies were found in your documents (GST/FSSAI). Please resubmit with corrections.</p>
                                     </div>
-                                    <Link to="/manager/onboarding" className="ml-auto px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors whitespace-nowrap">Resubmit</Link>
+                                    <Link to="/manager/onboarding" className="px-4 py-2 rounded-lg text-xs font-bold text-white whitespace-nowrap" style={{ background: "#ef4444", textDecoration: "none" }}>Resubmit</Link>
                                 </div>
                             )}
                         </div>
