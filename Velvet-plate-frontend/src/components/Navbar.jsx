@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
 import useCartStore from "../store/useCartStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { LogOut, User, Menu, X, ShoppingCart, LayoutDashboard, Settings } from "lucide-react";
 import axios from "../api/axios";
 

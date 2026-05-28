@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import api from "../../../api/axios";
 import { toast } from "react-toastify";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { X, UserCheck, FileText, Mail, Phone, Calendar, Store, CheckCircle, ExternalLink, ShieldAlert } from "lucide-react";
 
 export default function ManagerApprovalList() {

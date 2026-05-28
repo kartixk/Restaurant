@@ -1,10 +1,10 @@
-// src/pages/ManagerStatus.jsx
+﻿// src/pages/ManagerStatus.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import useAuthStore from "../store/useAuthStore";
 import { Clock, ShieldCheck, LogOut, Mail, HelpCircle, Activity } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 export default function ManagerStatus() {
     const { logout, user } = useAuthStore();

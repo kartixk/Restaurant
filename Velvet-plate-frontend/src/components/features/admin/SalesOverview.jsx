@@ -1,6 +1,6 @@
 // src/components/features/admin/SalesOverview.jsx
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { TrendingUp, BarChart3, FileSpreadsheet, Calendar, History, Store } from "lucide-react";
 
 export default function SalesOverview({ reportSummary, salesList, reportType, reportLoading, fetchReport, downloadExcel, AnimatedNumber }) {

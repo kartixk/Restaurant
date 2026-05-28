@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
+import {  AnimatePresence } from "motion/react";
 import { useCart, useRemoveCartItem, useUpdateCartItem, useConfirmOrder, useUpdateOrderType } from "../hooks/useCart";
 import useCartStore from "../store/useCartStore";
 import { X, Minus, Plus, ShoppingBag, ArrowRight, CreditCard, Wallet, Banknote, Utensils, Package, ChevronLeft } from "lucide-react";

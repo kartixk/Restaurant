@@ -4,7 +4,7 @@ import { useAddToCart } from "../hooks/useCart";
 import useAuthStore from "../store/useAuthStore";
 import useCartStore from "../store/useCartStore";
 import { toast, ToastContainer } from "react-toastify";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import useLocationStore from "../store/useLocationStore";
 import LocationPickerModal from "../components/LocationPickerModal";
 import { MapPin, Search, ShoppingBag, X, ChevronDown, Minus, Plus } from "lucide-react";

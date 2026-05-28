@@ -39,7 +39,8 @@ const authLimiter = rateLimit({
 // );
 
 const path = require('path');
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));

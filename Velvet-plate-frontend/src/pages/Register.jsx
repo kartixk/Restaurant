@@ -1,10 +1,10 @@
-// src/pages/Register.jsx
+﻿// src/pages/Register.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axios";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { User, Mail, Lock, Eye, EyeOff, Phone } from "lucide-react";
 
 export default function Register() {
@@ -56,7 +56,7 @@ export default function Register() {
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.response?.data?.message || "Registration failed";
       if (errorMsg === "Email already in use") {
-        toast.info("User already exists! Please sign in instead.", { icon: "👋" });
+        toast.info("User already exists! Please sign in instead.", { icon: "ðŸ‘‹" });
       } else if (err.response?.status === 429) {
         toast.warning("Too many registration attempts. Please try again later.");
       } else {

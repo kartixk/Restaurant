@@ -1,6 +1,6 @@
-// src/components/features/admin/BranchSettingsModal.jsx
+﻿// src/components/features/admin/BranchSettingsModal.jsx
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { useUpdateBranch } from "../../../hooks/useBranches";
 import { toast } from "react-toastify";
 import { Store, MapPin, Phone, ShieldCheck, Eye, EyeOff, X, Save, Trash2, Map, Navigation } from "lucide-react";
